@@ -366,10 +366,15 @@ fig.update_traces(
     textposition="top center",
     marker=dict(line=dict(width=1, color="black"))
 )
+fig.update_layout(
+    dragmode=False,
+    hovermode='closest'
+)
 
 st.plotly_chart(
     fig,
-    use_container_width=True
+    use_container_width=True,
+    config={"staticPlot": True}
 )
 
 st.divider()
@@ -463,9 +468,16 @@ fig_role_rank.update_layout(
     uniformtext_minsize=10,
     uniformtext_mode='hide'
 )
-fig_role_rank.update_layout(legend_traceorder='normal')
+fig_role_rank.update_layout(
+    legend_traceorder='normal',
+    dragmode=False
+)
 
-st.plotly_chart(fig_role_rank, use_container_width=True)
+st.plotly_chart(
+    fig_role_rank,
+    use_container_width=True,
+    config={"staticPlot": True}
+)
 
 st.write(
     '각 포지션 내에서 S/A/B/C 티어로 분류된 영웅 비중을 누적 막대 차트로 보여줍니다.'
