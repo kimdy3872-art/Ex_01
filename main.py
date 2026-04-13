@@ -57,13 +57,26 @@ with st.container():
             if st.button(btn_label, key=f"role_btn_{role_name}", use_container_width=True, help=f"{role_name} 포지션 데이터 분석"):
                 st.session_state.selected_role = role_name
 
+    st.markdown("---")
+    summary_col1, summary_col2 = st.columns([1, 1])
+    with summary_col1:
+        st.markdown(
+            f"**선택된 티어:** <span style='color:#0b69ff;'>`{st.session_state.selected_tier}`</span>",
+            unsafe_allow_html=True,
+        )
+    with summary_col2:
+        st.markdown(
+            f"**선택된 포지션:** <span style='color:#0b69ff;'>`{st.session_state.selected_role}`</span>",
+            unsafe_allow_html=True,
+        )
+
     f1, f2, f3 = st.columns([2, 1, 1])
     with f1:
-        st.write(f"**선택된 포지션:** {st.session_state.selected_role}")
-    with f2:
         sort_by = st.selectbox("📊 정렬 기준", ["종합 점수", "승률", "픽률"])
-    with f3:
+    with f2:
         search_hero = st.text_input("🔍 영웅 검색")
+    with f3:
+        st.write("\n")
 
 selected_tier = st.session_state.selected_tier
 selected_role = st.session_state.selected_role
@@ -229,7 +242,6 @@ def render_rank_table_html(df):
         )
     table_html = (
         styles
-        + "<div class='header-note'>픽률과 승률을 바로 비교할 수 있도록 막대 그래프를 추가했습니다.</div>"
         + "<table class='overwatch-table'><thead><tr>"
         + "<th>Portrait</th><th>영웅</th><th>포지션</th><th>승률</th><th>픽률</th><th>랭크</th>"
         + "</tr></thead><tbody>"
@@ -477,8 +489,4 @@ st.plotly_chart(
     fig_role_rank,
     use_container_width=True,
     config={"staticPlot": True}
-)
-
-st.write(
-    '각 포지션 내에서 S/A/B/C 티어로 분류된 영웅 비중을 누적 막대 차트로 보여줍니다.'
 )
