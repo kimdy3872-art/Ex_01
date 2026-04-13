@@ -1,4 +1,4 @@
-import streamlit as st
+
 import plotly.express as px
 import pandas as pd
 import numpy as np
@@ -187,13 +187,23 @@ def get_hero_image_url(hero_name):
 def render_rank_table_html(df):
     styles = """
     <style>
-    .overwatch-table {border-collapse: collapse; width: 100%;}
-    .overwatch-table th, .overwatch-table td {border: 1px solid #ddd; padding: 8px; vertical-align: middle;}
-    .overwatch-table th {background-color: #000; color: #fff; font-weight: 600;}
-    .overwatch-table .portrait-cell {width: 88px; text-align: center;}
-    .overwatch-table img {border-radius: 14px; display: block; margin: 0 auto; width: 64px; height: 64px; object-fit: cover;}
-    .overwatch-table td.hero-cell {text-align: left; font-weight: 600;}
-    .overwatch-table td:not(.portrait-cell) {padding: 10px 12px;}
+    .overwatch-table {border-collapse: collapse; width: 100%; font-family: "Apple SD Gothic Neo", "Segoe UI", sans-serif;}
+    .overwatch-table th, .overwatch-table td {border: 1px solid #334155; padding: 12px 14px; vertical-align: middle; color: #f8fafc;}
+    .overwatch-table {background-color: #0f172a;}
+    .overwatch-table th {background-color: #111827; color: #f8fafc; font-weight: 700; font-size: 0.95rem; letter-spacing: 0.02em;}
+    .overwatch-table tbody tr:hover {background-color: #111827;}
+    .overwatch-table .portrait-cell {width: 98px; text-align: center;}
+    .overwatch-table .portrait-cell img {border-radius: 16px; width: 68px; height: 68px; object-fit: cover;}
+    .overwatch-table .hero-cell {text-align: left; font-weight: 700; color: #f8fafc;}
+    .overwatch-table .role-cell {text-align: center; color: #f8fafc;}
+    .overwatch-table .rate-cell {text-align: left; min-width: 180px;}
+    .overwatch-table .rank-cell {text-align: center; font-weight: 700; color: #f8fafc;}
+    .rate-bar {background: #1f2937; border-radius: 999px; height: 10px; overflow: hidden; margin-top: 6px;}
+    .rate-fill {height: 100%; border-radius: 999px;}
+    .rate-fill.pick {background: #60a5fa;}
+    .rate-fill.win {background: #34d399;}
+    .rate-text {font-size: 0.9rem; color: #f8fafc; margin-top: 6px;}
+    .header-note {font-size: 0.9rem; color: #cbd5e1; margin-bottom: 8px;}
     </style>
     """
     rows = []
@@ -204,12 +214,22 @@ def render_rank_table_html(df):
         pick_rate = f"{row['pick_rate']:.1f}%"
         rank = html.escape(str(row["rank"]))
         hero_url = get_hero_image_url(row["hero"])
-        img_html = f'<img src="{hero_url}" width="56"/>' if hero_url else "-"
+        img_html = f'<img src="{hero_url}"/>' if hero_url else "-"
+
+        pick_html = (
+            f"<div class='rate-bar'><div class='rate-fill pick' style='width:{min(max(row['pick_rate'],0),100)}%'></div></div>"
+            f"<div class='rate-text'>{pick_rate}</div>"
+        )
+        win_html = (
+            f"<div class='rate-bar'><div class='rate-fill win' style='width:{min(max(row['win_rate'],0),100)}%'></div></div>"
+            f"<div class='rate-text'>{win_rate}</div>"
+        )
         rows.append(
-            f"<tr><td>{img_html}</td><td class='hero-cell'>{hero}</td><td>{role}</td><td>{win_rate}</td><td>{pick_rate}</td><td>{rank}</td></tr>"
+            f"<tr><td class='portrait-cell'>{img_html}</td><td class='hero-cell'>{hero}</td><td class='role-cell'>{role}</td><td class='rate-cell'>{win_html}</td><td class='rate-cell'>{pick_html}</td><td class='rank-cell'>{rank}</td></tr>"
         )
     table_html = (
         styles
+        + "<div class='header-note'>픽률과 승률을 바로 비교할 수 있도록 막대 그래프를 추가했습니다.</div>"
         + "<table class='overwatch-table'><thead><tr>"
         + "<th>Portrait</th><th>영웅</th><th>포지션</th><th>승률</th><th>픽률</th><th>랭크</th>"
         + "</tr></thead><tbody>"
@@ -259,6 +279,13 @@ st.divider()
 
 st.subheader("🚀 픽률 vs 승률 분포")
 
+pick_center = df_filtered["pick_rate"].mean()
+win_center = df_filtered["win_rate"].mean()
+x_min = df_filtered["pick_rate"].min()
+x_max = df_filtered["pick_rate"].max()
+y_min = df_filtered["win_rate"].min()
+y_max = df_filtered["win_rate"].max()
+
 fig = px.scatter(
     df_filtered,
     x="pick_rate",
@@ -281,6 +308,58 @@ fig = px.scatter(
         "win_rate": "승률 (%)",
         "rank": "영웅 랭크"
     }
+)
+
+fig.add_shape(
+    type="line",
+    x0=pick_center,
+    x1=pick_center,
+    y0=y_min,
+    y1=y_max,
+    line=dict(color="gray", width=1, dash="dash"),
+    xref="x",
+    yref="y"
+)
+fig.add_shape(
+    type="line",
+    x0=x_min,
+    x1=x_max,
+    y0=win_center,
+    y1=win_center,
+    line=dict(color="gray", width=1, dash="dash"),
+    xref="x",
+    yref="y"
+)
+
+fig.add_annotation(
+    x=x_max,
+    y=win_center,
+    text="Popular",
+    showarrow=False,
+    xanchor="right",
+    yanchor="bottom",
+    font=dict(color="#4b5563", size=12),
+    bgcolor="rgba(255,255,255,0.8)"
+)
+fig.add_annotation(
+    x=pick_center,
+    y=y_max,
+    text="Strong",
+    showarrow=False,
+    xanchor="left",
+    yanchor="top",
+    font=dict(color="#4b5563", size=12),
+    bgcolor="rgba(255,255,255,0.8)"
+)
+fig.add_annotation(
+    x=x_max,
+    y=y_max,
+    text="Strong + Popular",
+    showarrow=False,
+    xanchor="right",
+    yanchor="top",
+    font=dict(color="#111827", size=12, family="Arial, sans-serif", weight="bold"),
+    bgcolor="rgba(255,255,255,0.9)"
 )
 
 fig.update_traces(
