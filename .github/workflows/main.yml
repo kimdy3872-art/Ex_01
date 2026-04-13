@@ -11,10 +11,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
@@ -30,10 +32,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          git pull --rebase origin main
-          
           git add overwatch_competitive_stats.csv
-          git commit -m
-          
-          git push
+          git commit -m "Auto-update overwatch_competitive_stats.csv" || echo "No changes to commit"
+          git pull --rebase origin main
+          git push origin main
