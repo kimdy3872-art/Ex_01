@@ -2,7 +2,7 @@ name: Daily Overwatch Data Update
 
 on:
   schedule:
-    - cron: '0 15 * * *' # UTC 기준 매일 밤 12시 (KST)
+    - cron: '0 15 * * 1'  # UTC 기준 매일 밤 12시 (KST)
   workflow_dispatch: {}
 
 jobs:
