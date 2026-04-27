@@ -101,18 +101,25 @@ st.markdown(
     }}
 
     /* Buttons */
-    .stButton > button {{
+    .stButton > button,
+    div[data-testid="stButton"] > button,
+    button[data-testid^="stBaseButton-"] {{
         border-radius: 12px !important;
         font-weight: 600 !important;
         transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
         background-image: none !important;
         text-shadow: none !important;
         min-height: 40px !important;
+        opacity: 1 !important;
     }}
 
     /* Unselected filter button (Streamlit secondary type) */
     .stButton > button[kind="secondary"],
-    .stButton > button[data-testid="baseButton-secondary"] {{
+    .stButton > button[data-testid="baseButton-secondary"],
+    .stButton > button[data-testid="stBaseButton-secondary"],
+    button[data-testid="baseButton-secondary"],
+    button[data-testid="stBaseButton-secondary"],
+    div[data-testid="stButton"] > button:not([kind="primary"]):not([data-testid$="-primary"]) {{
         background-color: var(--app-surface-alt) !important;
         color: var(--app-text) !important;
         -webkit-text-fill-color: var(--app-text) !important;
@@ -121,13 +128,21 @@ st.markdown(
         filter: none !important;
     }}
     .stButton > button[kind="secondary"] *,
-    .stButton > button[data-testid="baseButton-secondary"] * {{
+    .stButton > button[data-testid="baseButton-secondary"] *,
+    .stButton > button[data-testid="stBaseButton-secondary"] *,
+    button[data-testid="baseButton-secondary"] *,
+    button[data-testid="stBaseButton-secondary"] *,
+    div[data-testid="stButton"] > button:not([kind="primary"]):not([data-testid$="-primary"]) * {{
         color: var(--app-text) !important;
         -webkit-text-fill-color: var(--app-text) !important;
         opacity: 1 !important;
     }}
     .stButton > button[kind="secondary"]:hover,
-    .stButton > button[data-testid="baseButton-secondary"]:hover {{
+    .stButton > button[data-testid="baseButton-secondary"]:hover,
+    .stButton > button[data-testid="stBaseButton-secondary"]:hover,
+    button[data-testid="baseButton-secondary"]:hover,
+    button[data-testid="stBaseButton-secondary"]:hover,
+    div[data-testid="stButton"] > button:not([kind="primary"]):not([data-testid$="-primary"]):hover {{
         background-color: var(--app-surface) !important;
         color: var(--app-text) !important;
         -webkit-text-fill-color: var(--app-text) !important;
@@ -135,7 +150,11 @@ st.markdown(
         opacity: 1 !important;
     }}
     .stButton > button[kind="secondary"]:focus-visible,
-    .stButton > button[data-testid="baseButton-secondary"]:focus-visible {{
+    .stButton > button[data-testid="baseButton-secondary"]:focus-visible,
+    .stButton > button[data-testid="stBaseButton-secondary"]:focus-visible,
+    button[data-testid="baseButton-secondary"]:focus-visible,
+    button[data-testid="stBaseButton-secondary"]:focus-visible,
+    div[data-testid="stButton"] > button:not([kind="primary"]):not([data-testid$="-primary"]):focus-visible {{
         outline: 2px solid #334155 !important;
         outline-offset: 1px !important;
     }}
@@ -160,7 +179,11 @@ st.markdown(
         -webkit-text-fill-color: #ffffff !important;
         opacity: 1 !important;
     }}
-    .stButton > button[kind="primary"]:hover {{
+    .stButton > button[kind="primary"],
+    .stButton > button[data-testid="baseButton-primary"],
+    .stButton > button[data-testid="stBaseButton-primary"],
+    button[data-testid="baseButton-primary"],
+    button[data-testid="stBaseButton-primary"] {{
         background-color: #2563eb !important;
         border-color: #60a5fa !important;
     }}
@@ -168,13 +191,19 @@ st.markdown(
     /* Inputs */
     .stTextInput input,
     .stNumberInput input,
-    .stTextArea textarea,
+    .stButton > button[data-testid="baseButton-primary"] *,
+    .stButton > button[data-testid="stBaseButton-primary"] *,
+    button[data-testid="baseButton-primary"] *,
+    button[data-testid="stBaseButton-primary"] * {{
     .stSelectbox [data-baseweb="select"] > div {{
         background-color: var(--app-surface) !important;
         color: var(--app-text) !important;
         border: 1px solid var(--app-border) !important;
         border-radius: 12px !important;
-    }}
+    .stButton > button[data-testid="baseButton-primary"]:hover,
+    .stButton > button[data-testid="stBaseButton-primary"]:hover,
+    button[data-testid="baseButton-primary"]:hover,
+    button[data-testid="stBaseButton-primary"]:hover {{
     .stTextInput input::placeholder,
     .stTextArea textarea::placeholder {{
         color: var(--app-text-muted) !important;
