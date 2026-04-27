@@ -29,8 +29,10 @@ GLOBAL_FONT_FAMILY = "'Pretendard Variable', 'Pretendard', 'Noto Sans KR', 'Appl
 st.markdown(
     f"""
     <style>
-    :root {{
-        color-scheme: dark;
+    :root,
+    [data-theme="light"],
+    [data-theme="dark"] {{
+        color-scheme: dark !important;
         --app-bg: {GLOBAL_BG_COLOR};
         --app-surface: {GLOBAL_SURFACE_COLOR};
         --app-surface-alt: {GLOBAL_SURFACE_ALT_COLOR};
@@ -39,6 +41,14 @@ st.markdown(
         --app-text-muted: {GLOBAL_MUTED_TEXT_COLOR};
         --app-accent: {GLOBAL_ACCENT_COLOR};
         --app-font: {GLOBAL_FONT_FAMILY};
+        --primary-color: {GLOBAL_ACCENT_COLOR};
+        --background-color: {GLOBAL_BG_COLOR};
+        --secondary-background-color: {GLOBAL_SURFACE_COLOR};
+        --text-color: {GLOBAL_TEXT_COLOR};
+        --font: {GLOBAL_FONT_FAMILY};
+    }}
+    html, body {{
+        color-scheme: dark !important;
     }}
     body, .stApp,
     [data-testid="stAppViewContainer"],
@@ -174,6 +184,16 @@ st.markdown(
     .stTextArea textarea:focus {{
         border-color: var(--app-accent) !important;
         box-shadow: 0 0 0 1px var(--app-accent) !important;
+    }}
+    [data-baseweb="popover"],
+    [data-baseweb="menu"],
+    [role="listbox"] {{
+        background-color: var(--app-surface) !important;
+        color: var(--app-text) !important;
+        border: 1px solid var(--app-border) !important;
+    }}
+    [role="option"] {{
+        color: var(--app-text) !important;
     }}
     [data-testid="stExpander"] > details {{
         background-color: rgba(15, 23, 42, 0.55) !important;
