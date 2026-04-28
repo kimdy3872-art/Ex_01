@@ -244,6 +244,12 @@ st.markdown(
         box-shadow: 0 0 0 1px var(--app-accent) !important;
     }}
 
+    /* Selectbox input focus state */
+    .stSelectbox [data-baseweb="select"]:focus-within,
+    div[data-baseweb="select"]:focus-within {{
+        border-color: var(--app-accent) !important;
+    }}
+    
     /* Dropdown popup and options */
     [data-baseweb="popover"],
     [data-baseweb="menu"],
@@ -261,9 +267,23 @@ st.markdown(
         color: var(--app-text) !important;
         -webkit-text-fill-color: var(--app-text) !important;
     }}
+    [role="option"]:hover,
+    li[role="option"]:hover {{
+        background-color: rgba(59, 130, 246, 0.2) !important;
+    }}
     [role="option"][aria-selected="true"],
     li[role="option"][aria-selected="true"] {{
-        background-color: var(--app-surface-alt) !important;
+        background-color: rgba(59, 130, 246, 0.35) !important;
+        color: var(--app-text) !important;
+    }}\n    
+    /* Checkbox & Radio */
+    [data-testid="stCheckbox"] label,
+    [data-testid="stRadio"] label {{
+        color: var(--app-text) !important;
+    }}
+    input[type="checkbox"],
+    input[type="radio"] {{
+        accent-color: var(--app-accent) !important;
     }}
     [data-testid="stExpander"] > details {{
         background-color: rgba(15, 23, 42, 0.55) !important;
