@@ -12,6 +12,8 @@ import time
 from time import perf_counter
 from datetime import date
 import os
+import shutil
+from zipfile import BadZipFile
 
 # 1. 영웅별 포지션 매핑 딕셔너리
 role_dict = {
@@ -95,15 +97,35 @@ def format_elapsed(seconds):
         return f"{minutes}분 {seconds}초"
     return f"{seconds}초"
 
-def create_driver():
+def create_driver(driver_path):
     opts = Options()
-    opts.add_argument("--headless")
+    opts.add_argument("--headless=new")
     opts.add_argument("--no-sandbox")
     opts.add_argument("--disable-dev-shm-usage")
     opts.add_argument("--disable-gpu")
     opts.add_argument("--disable-extensions")
+    opts.add_argument("--remote-debugging-port=9222")
     opts.add_argument("--window-size=1920,1080")
-    return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=opts)
+    return webdriver.Chrome(service=Service(driver_path), options=opts)
+
+
+def prepare_chromedriver(max_retries=2):
+    """Install chromedriver once and reuse path across threads."""
+    last_error = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            return ChromeDriverManager().install()
+        except BadZipFile as exc:
+            last_error = exc
+            print(f"⚠️  크롬 드라이버 압축 손상 감지(시도 {attempt}/{max_retries}), 캐시 정리 후 재시도")
+            for cache_dir in [os.path.expanduser("~/.wdm"), ".wdm"]:
+                if os.path.exists(cache_dir):
+                    shutil.rmtree(cache_dir, ignore_errors=True)
+        except Exception as exc:
+            last_error = exc
+            print(f"⚠️  크롬 드라이버 설치 실패(시도 {attempt}/{max_retries}): {exc}")
+
+    raise RuntimeError(f"ChromeDriver 설치 실패: {last_error}")
 
 def normalize_dataset_for_scoring(df):
     valid_maps = set(map_dict.keys())
@@ -157,9 +179,9 @@ def scrape_data(driver, tier_name, map_id):
         print(f"❌ {tier_name} / {map_id} 에러: {e}")
         return pd.DataFrame()
 
-def scrape_task(task):
+def scrape_task(task, driver_path):
     tier_name, map_id = task
-    driver = create_driver()
+    driver = create_driver(driver_path)
     try:
         df = scrape_data(driver, tier_name, map_id)
         missing = []
@@ -180,13 +202,17 @@ def main():
     map_ids = list(map_dict.keys())
     print(f"🗺️  전장 {len(map_ids)}개: {map_ids}")
 
+    print("🔧 크롬 드라이버 준비 중...")
+    driver_path = prepare_chromedriver()
+    print(f"✅ 크롬 드라이버 준비 완료: {driver_path}")
+
     tasks = [(tier_name, map_id) for map_id in map_ids for tier_name in tiers]
     total = len(tasks)
     print(f"🧵 병렬 수집 시작: worker={MAX_WORKERS}, task={total}")
 
     final_list = []
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        futures = {executor.submit(scrape_task, task): task for task in tasks}
+        futures = {executor.submit(scrape_task, task, driver_path): task for task in tasks}
         for done, future in enumerate(as_completed(futures), start=1):
             tier_name, map_id = futures[future]
             print(f"🚀 [{done}/{total}] {tier_name} / {map_id} 완료")
