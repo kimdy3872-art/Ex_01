@@ -38,10 +38,14 @@ st.markdown(
         background-color: var(--app-bg) !important;
         color: var(--app-text) !important;
     }}
-    [data-testid="stSidebarNav"] {{
+    [data-testid="stSidebarNav"],
+    [data-testid="stSidebar"],
+    .sidebar,
+    [aria-label="Sidebar"] {{
         display: none !important;
     }}
     [data-testid="stSidebarCollapseButton"],
+    [data-testid="stSidebarToggleButton"],
     button[aria-label="Open sidebar"],
     button[aria-label="Close sidebar"] {{
         display: none !important;
