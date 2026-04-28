@@ -49,10 +49,14 @@ st.markdown(
         padding-top: 3.35rem !important;
         padding-bottom: 1.8rem !important;
     }}
-    [data-testid="stSidebarNav"] {{
+    [data-testid="stSidebarNav"],
+    [data-testid="stSidebar"],
+    .sidebar,
+    [aria-label="Sidebar"] {{
         display: none !important;
     }}
     [data-testid="stSidebarCollapseButton"],
+    [data-testid="stSidebarToggleButton"],
     button[aria-label="Open sidebar"],
     button[aria-label="Close sidebar"] {{
         display: none !important;
