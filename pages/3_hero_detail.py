@@ -89,13 +89,69 @@ st.markdown(
     button[data-testid="stBaseButton-primary"]:disabled {{
         opacity: 1 !important;
     }}
+    
+    /* Selectbox & Dropdowns */
     .stSelectbox [data-baseweb="select"] > div,
-    div[data-baseweb="select"] > div {{
+    div[data-baseweb="select"] > div,
+    [data-baseweb="popover"] {{
         background-color: var(--app-surface) !important;
         color: var(--app-text) !important;
         border: 1px solid var(--app-border) !important;
         border-radius: 12px !important;
     }}
+    .stSelectbox input,
+    [data-baseweb="input"] input {{
+        background-color: var(--app-surface) !important;
+        color: var(--app-text) !important;
+        caret-color: var(--app-accent) !important;
+    }}
+    .stSelectbox [data-baseweb="input"] input:focus,
+    [data-baseweb="input"] input:focus {{
+        background-color: var(--app-surface) !important;
+        border-color: var(--app-accent) !important;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+    }}
+    [data-baseweb="popover"] [role="listbox"],
+    [data-baseweb="popover"] [role="menu"] {{
+        background-color: var(--app-surface) !important;
+    }}
+    [role="option"],
+    [role="menuitem"] {{
+        color: var(--app-text) !important;
+    }}
+    [role="option"]:hover,
+    [role="menuitem"]:hover {{
+        background-color: rgba(59, 130, 246, 0.2) !important;
+    }}
+    [role="option"][aria-selected="true"],
+    [role="menuitem"][aria-selected="true"] {{
+        background-color: rgba(59, 130, 246, 0.35) !important;
+        color: var(--app-text) !important;
+    }}
+    
+    /* Text Input */
+    .stTextInput input {{
+        background-color: var(--app-surface) !important;
+        color: var(--app-text) !important;
+        border: 1px solid var(--app-border) !important;
+        border-radius: 12px !important;
+        caret-color: var(--app-accent) !important;
+    }}
+    .stTextInput input:focus {{
+        border-color: var(--app-accent) !important;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+    }}
+    
+    /* Checkbox & Radio */
+    [data-testid="stCheckbox"] label,
+    [data-testid="stRadio"] label {{
+        color: var(--app-text) !important;
+    }}
+    input[type="checkbox"],
+    input[type="radio"] {{
+        accent-color: var(--app-accent) !important;
+    }}
+    
     [data-testid="stExpander"] > details {{
         background-color: rgba(15, 23, 42, 0.55) !important;
         border: 1px solid var(--app-border) !important;
@@ -105,6 +161,10 @@ st.markdown(
         font-size: 1.01rem !important;
         font-weight: 700 !important;
         line-height: 1.3 !important;
+        color: var(--app-text) !important;
+    }}
+    [data-testid="stExpander"] summary:hover {{
+        background-color: rgba(59, 130, 246, 0.1) !important;
     }}
     [data-testid="stExpander"] summary p {{
         margin: 0 !important;
