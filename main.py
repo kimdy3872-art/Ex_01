@@ -762,6 +762,25 @@ st.divider()
 st.subheader("🏆 영웅 랭크 순위표")
 st.caption("영웅 이름을 클릭하면 상세 페이지로 이동합니다.")
 
+with st.expander("랭크는 어떻게 산정되나요?"):
+    st.markdown(
+        """
+        - 랭크는 티어/포지션/전장(all-maps) 필터 기준의 종합 지표로 산정됩니다.
+        - 기본적으로 승률과 픽률 기반 점수를 함께 반영해 `S > A > B > C`로 구간화합니다.
+        - 표의 정렬 기준(종합 점수/승률/픽률)을 바꾸면 같은 집합 내 우선순위가 달라집니다.
+        - 데이터는 최신 수집일 기준으로만 비교됩니다.
+        """
+    )
+
+with st.expander("장인챔프는 뭔가요?"):
+    st.markdown(
+        """
+        - 장인챔프는 **낮은 픽률 대비 높은 승률**을 보이는 영웅입니다.
+        - 현재 기준: `pick_rate_z <= -0.5` and `win_rate_z >= 0.5`
+        - 즉, 평균보다 덜 선택되지만 성과가 높은 영웅을 뜻합니다.
+        """
+    )
+
 sort_col = {
     "종합 점수": "total_score",
     "승률": "win_rate",
@@ -784,25 +803,6 @@ if not display_df.empty:
     st.markdown(render_rank_table_html(display_df), unsafe_allow_html=True)
 else:
     st.info("선택한 조건에 해당하는 영웅이 없습니다.")
-
-with st.expander("랭크는 어떻게 산정되나요?"):
-    st.markdown(
-        """
-        - 랭크는 티어/포지션/전장(all-maps) 필터 기준의 종합 지표로 산정됩니다.
-        - 기본적으로 승률과 픽률 기반 점수를 함께 반영해 `S > A > B > C`로 구간화합니다.
-        - 표의 정렬 기준(종합 점수/승률/픽률)을 바꾸면 같은 집합 내 우선순위가 달라집니다.
-        - 데이터는 최신 수집일 기준으로만 비교됩니다.
-        """
-    )
-
-with st.expander("장인챔프는 뭔가요?"):
-    st.markdown(
-        """
-        - 장인챔프는 **낮은 픽률 대비 높은 승률**을 보이는 영웅입니다.
-        - 현재 기준: `pick_rate_z <= -0.5` and `win_rate_z >= 0.5`
-        - 즉, 평균보다 덜 선택되지만 성과가 높은 영웅을 뜻합니다.
-        """
-    )
 
 hero_from_query = st.query_params.get("hero")
 if isinstance(hero_from_query, list):
