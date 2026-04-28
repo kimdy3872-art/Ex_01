@@ -4,7 +4,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
+from selenium.common.exceptions import SessionNotCreatedException, WebDriverException
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import pandas as pd
 import numpy as np
@@ -12,8 +12,6 @@ import time
 from time import perf_counter
 from datetime import date
 import os
-import shutil
-from zipfile import BadZipFile
 
 # 1. 영웅별 포지션 매핑 딕셔너리
 role_dict = {
@@ -84,7 +82,10 @@ STATS_COLUMNS = [
     'win_rate', 'pick_rate', 'win_rate_z', 'pick_rate_log', 'pick_rate_z', 'total_score', 'rank',
 ]
 
-MAX_WORKERS = 4
+DEFAULT_MAX_WORKERS = 2 if os.getenv("GITHUB_ACTIONS") == "true" else 4
+MAX_WORKERS = int(os.getenv("MAX_WORKERS", str(DEFAULT_MAX_WORKERS)))
+DRIVER_CREATE_RETRIES = 3
+TASK_RETRIES = 2
 
 def format_elapsed(seconds):
     total_seconds = int(round(seconds))
@@ -97,35 +98,33 @@ def format_elapsed(seconds):
         return f"{minutes}분 {seconds}초"
     return f"{seconds}초"
 
-def create_driver(driver_path):
+def build_chrome_options():
     opts = Options()
     opts.add_argument("--headless=new")
     opts.add_argument("--no-sandbox")
     opts.add_argument("--disable-dev-shm-usage")
     opts.add_argument("--disable-gpu")
     opts.add_argument("--disable-extensions")
-    opts.add_argument("--remote-debugging-port=9222")
+    opts.add_argument("--remote-debugging-pipe")
     opts.add_argument("--window-size=1920,1080")
-    return webdriver.Chrome(service=Service(driver_path), options=opts)
+    return opts
 
 
-def prepare_chromedriver(max_retries=2):
-    """Install chromedriver once and reuse path across threads."""
+def create_driver(max_retries=DRIVER_CREATE_RETRIES):
+    """Create Chrome session with retries for CI renderer startup failures."""
     last_error = None
     for attempt in range(1, max_retries + 1):
         try:
-            return ChromeDriverManager().install()
-        except BadZipFile as exc:
+            opts = build_chrome_options()
+            return webdriver.Chrome(options=opts)
+        except (SessionNotCreatedException, WebDriverException) as exc:
             last_error = exc
-            print(f"⚠️  크롬 드라이버 압축 손상 감지(시도 {attempt}/{max_retries}), 캐시 정리 후 재시도")
-            for cache_dir in [os.path.expanduser("~/.wdm"), ".wdm"]:
-                if os.path.exists(cache_dir):
-                    shutil.rmtree(cache_dir, ignore_errors=True)
-        except Exception as exc:
-            last_error = exc
-            print(f"⚠️  크롬 드라이버 설치 실패(시도 {attempt}/{max_retries}): {exc}")
+            wait_sec = attempt * 2
+            print(f"⚠️  드라이버 세션 생성 실패(시도 {attempt}/{max_retries}), {wait_sec}초 후 재시도")
+            if attempt < max_retries:
+                time.sleep(wait_sec)
 
-    raise RuntimeError(f"ChromeDriver 설치 실패: {last_error}")
+    raise RuntimeError(f"Chrome 세션 생성 실패: {last_error}")
 
 def normalize_dataset_for_scoring(df):
     valid_maps = set(map_dict.keys())
@@ -179,22 +178,41 @@ def scrape_data(driver, tier_name, map_id):
         print(f"❌ {tier_name} / {map_id} 에러: {e}")
         return pd.DataFrame()
 
-def scrape_task(task, driver_path):
+def scrape_task(task):
     tier_name, map_id = task
-    driver = create_driver(driver_path)
-    try:
-        df = scrape_data(driver, tier_name, map_id)
-        missing = []
-        if not df.empty:
-            missing = df[df['role'].isna()]['hero'].unique().tolist()
-        return {
-            'tier_name': tier_name,
-            'map_id': map_id,
-            'df': df,
-            'missing': missing,
-        }
-    finally:
-        driver.quit()
+    for attempt in range(1, TASK_RETRIES + 1):
+        driver = None
+        try:
+            driver = create_driver()
+            df = scrape_data(driver, tier_name, map_id)
+            missing = []
+            if not df.empty:
+                missing = df[df['role'].isna()]['hero'].unique().tolist()
+            if df.empty and attempt < TASK_RETRIES:
+                print(f"⚠️  {tier_name} / {map_id} 빈 결과(시도 {attempt}/{TASK_RETRIES}), 재시도")
+                time.sleep(attempt)
+                continue
+            return {
+                'tier_name': tier_name,
+                'map_id': map_id,
+                'df': df,
+                'missing': missing,
+            }
+        except Exception as exc:
+            if attempt < TASK_RETRIES:
+                print(f"⚠️  {tier_name} / {map_id} 작업 실패(시도 {attempt}/{TASK_RETRIES}), 재시도: {exc}")
+                time.sleep(attempt * 2)
+                continue
+            print(f"❌ {tier_name} / {map_id} 최종 실패: {exc}")
+            return {
+                'tier_name': tier_name,
+                'map_id': map_id,
+                'df': pd.DataFrame(),
+                'missing': [],
+            }
+        finally:
+            if driver is not None:
+                driver.quit()
 
 def main():
     started_at = perf_counter()
@@ -202,17 +220,13 @@ def main():
     map_ids = list(map_dict.keys())
     print(f"🗺️  전장 {len(map_ids)}개: {map_ids}")
 
-    print("🔧 크롬 드라이버 준비 중...")
-    driver_path = prepare_chromedriver()
-    print(f"✅ 크롬 드라이버 준비 완료: {driver_path}")
-
     tasks = [(tier_name, map_id) for map_id in map_ids for tier_name in tiers]
     total = len(tasks)
     print(f"🧵 병렬 수집 시작: worker={MAX_WORKERS}, task={total}")
 
     final_list = []
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        futures = {executor.submit(scrape_task, task, driver_path): task for task in tasks}
+        futures = {executor.submit(scrape_task, task): task for task in tasks}
         for done, future in enumerate(as_completed(futures), start=1):
             tier_name, map_id = futures[future]
             print(f"🚀 [{done}/{total}] {tier_name} / {map_id} 완료")
