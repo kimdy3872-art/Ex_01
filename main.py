@@ -1,13 +1,10 @@
 import streamlit as st
 import plotly.express as px
 import pandas as pd
-import numpy as np
 import urllib.request
 import urllib.parse
 import json
 import html
-import os
-import re
 
 # -------------------------------------------------
 # 1. 페이지 설정
@@ -73,6 +70,9 @@ st.markdown(
         color: var(--app-text) !important;
     }}
     header[data-testid="stHeader"] {{
+        display: none !important;
+    }}
+    [data-testid="stSidebarNav"] {{
         display: none !important;
     }}
     .block-container {{
@@ -167,62 +167,94 @@ st.markdown(
     }}
 
     /* Selected filter button (Streamlit primary type) */
-    .stButton > button[kind="primary"] {{
+    .stButton > button[kind="primary"],
+    .stButton > button[data-testid="baseButton-primary"],
+    .stButton > button[data-testid="stBaseButton-primary"],
+    button[data-testid="baseButton-primary"],
+    button[data-testid="stBaseButton-primary"] {{
         background-color: var(--app-accent) !important;
         border-color: #60a5fa !important;
         color: #ffffff !important;
         -webkit-text-fill-color: #ffffff !important;
         box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.35), 0 0 0 4px rgba(59, 130, 246, 0.2) !important;
     }}
-    .stButton > button[kind="primary"] * {{
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
-        opacity: 1 !important;
-    }}
-    .stButton > button[kind="primary"],
-    .stButton > button[data-testid="baseButton-primary"],
-    .stButton > button[data-testid="stBaseButton-primary"],
-    button[data-testid="baseButton-primary"],
-    button[data-testid="stBaseButton-primary"] {{
-        background-color: #2563eb !important;
-        border-color: #60a5fa !important;
-    }}
-
-    /* Inputs */
-    .stTextInput input,
-    .stNumberInput input,
+    .stButton > button[kind="primary"] *,
     .stButton > button[data-testid="baseButton-primary"] *,
     .stButton > button[data-testid="stBaseButton-primary"] *,
     button[data-testid="baseButton-primary"] *,
     button[data-testid="stBaseButton-primary"] * {{
-    .stSelectbox [data-baseweb="select"] > div {{
-        background-color: var(--app-surface) !important;
-        color: var(--app-text) !important;
-        border: 1px solid var(--app-border) !important;
-        border-radius: 12px !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        opacity: 1 !important;
+    }}
+    .stButton > button[kind="primary"]:hover,
     .stButton > button[data-testid="baseButton-primary"]:hover,
     .stButton > button[data-testid="stBaseButton-primary"]:hover,
     button[data-testid="baseButton-primary"]:hover,
     button[data-testid="stBaseButton-primary"]:hover {{
+        background-color: #2563eb !important;
+        border-color: #60a5fa !important;
+    }}
+
+    /* Inputs: sort selectbox + hero search */
+    .stTextInput input,
+    .stNumberInput input,
+    .stTextArea textarea,
+    .stSelectbox [data-baseweb="select"] > div,
+    .stSelectbox [data-baseweb="select"] input,
+    .stSelectbox [data-baseweb="select"] span,
+    div[data-baseweb="select"] > div,
+    div[data-baseweb="select"] input,
+    div[data-baseweb="select"] span {{
+        background-color: var(--app-surface) !important;
+        color: var(--app-text) !important;
+        -webkit-text-fill-color: var(--app-text) !important;
+        border: 1px solid var(--app-border) !important;
+        border-radius: 12px !important;
+        opacity: 1 !important;
+    }}
+    .stSelectbox svg,
+    div[data-baseweb="select"] svg {{
+        fill: var(--app-text) !important;
+        color: var(--app-text) !important;
+    }}
     .stTextInput input::placeholder,
-    .stTextArea textarea::placeholder {{
+    .stTextArea textarea::placeholder,
+    .stSelectbox input::placeholder,
+    div[data-baseweb="select"] input::placeholder {{
         color: var(--app-text-muted) !important;
+        -webkit-text-fill-color: var(--app-text-muted) !important;
+        opacity: 1 !important;
     }}
     .stTextInput input:focus,
     .stNumberInput input:focus,
-    .stTextArea textarea:focus {{
+    .stTextArea textarea:focus,
+    .stSelectbox [data-baseweb="select"] > div:focus-within,
+    div[data-baseweb="select"] > div:focus-within {{
         border-color: var(--app-accent) !important;
         box-shadow: 0 0 0 1px var(--app-accent) !important;
     }}
+
+    /* Dropdown popup and options */
     [data-baseweb="popover"],
     [data-baseweb="menu"],
-    [role="listbox"] {{
+    [role="listbox"],
+    ul[role="listbox"] {{
         background-color: var(--app-surface) !important;
         color: var(--app-text) !important;
         border: 1px solid var(--app-border) !important;
+        border-radius: 12px !important;
+        opacity: 1 !important;
     }}
-    [role="option"] {{
+    [role="option"],
+    li[role="option"] {{
+        background-color: var(--app-surface) !important;
         color: var(--app-text) !important;
+        -webkit-text-fill-color: var(--app-text) !important;
+    }}
+    [role="option"][aria-selected="true"],
+    li[role="option"][aria-selected="true"] {{
+        background-color: var(--app-surface-alt) !important;
     }}
     [data-testid="stExpander"] > details {{
         background-color: rgba(15, 23, 42, 0.55) !important;
@@ -238,6 +270,10 @@ st.markdown(
         margin: 0 !important;
         line-height: 1.35 !important;
     }}
+    [data-testid="stIconMaterial"],
+    [data-testid="stExpander"] summary span[class*="material"] {{
+        font-family: "Material Symbols Rounded", "Material Symbols Outlined", "Material Icons" !important;
+    }}
     [data-testid="stDialog"] [role="dialog"] {{
         border-radius: 16px !important;
         border: 1px solid var(--app-border) !important;
@@ -249,6 +285,32 @@ st.markdown(
 )
 
 st.title("🎮 오버워치 2 경쟁전 메타 분석기")
+
+
+def render_top_navigation(current_page):
+    nav_items = [
+        ("main", "🏠 메인", "main.py"),
+        ("pick_win", "🚀 픽률/승률 분포", "pages/1_pick_win_distribution.py"),
+        ("role_rank", "💡 역할별 랭크 비중", "pages/2_role_rank_share.py"),
+    ]
+
+    nav_cols = st.columns(len(nav_items))
+    for col, (page_key, label, target) in zip(nav_cols, nav_items):
+        with col:
+            is_current = page_key == current_page
+            clicked = st.button(
+                label,
+                key=f"top_nav_{current_page}_{page_key}",
+                use_container_width=True,
+                type="primary" if is_current else "secondary",
+                disabled=is_current,
+            )
+            if clicked and hasattr(st, "switch_page"):
+                st.switch_page(target)
+
+
+render_top_navigation("main")
+st.markdown("<div style='height: 0.4rem;'></div>", unsafe_allow_html=True)
 
 # -------------------------------------------------
 # 2. 데이터 로드
@@ -276,6 +338,13 @@ def load_data():
     return df
 
 df_raw = load_data()
+
+if "update_date" in df_raw.columns and not df_raw.empty:
+    base_date = str(df_raw["update_date"].iloc[0])
+else:
+    base_date = "-"
+
+st.caption(f"데이터 기준일: {base_date}")
 
 # -------------------------------------------------
 # 3. 메인 상단 필터
@@ -342,72 +411,61 @@ def render_metric_card(title, value, accent_color="#0b69ff"):
     </div>
     """
 
-if 'selected_tier' not in st.session_state:
+if "selected_tier" not in st.session_state:
     st.session_state.selected_tier = "Gold"
-if 'selected_role' not in st.session_state:
+if "selected_role" not in st.session_state:
     st.session_state.selected_role = "All"
+if "sort_by" not in st.session_state:
+    st.session_state.sort_by = "종합 점수"
+if "search_hero" not in st.session_state:
+    st.session_state.search_hero = ""
+
+
+def reset_filters():
+    st.session_state.selected_tier = "Gold"
+    st.session_state.selected_role = "All"
+    st.session_state.sort_by = "종합 점수"
+    st.session_state.search_hero = ""
 
 with st.container():
-    st.write("### 🏆 티어 구간 선택")
-    t_cols = st.columns(len(tiers))
+    c1, c2, c3, c4, c5 = st.columns([1.05, 1.0, 0.95, 1.65, 0.55])
 
-    for i, tier_name in enumerate(tiers):
-        with t_cols[i]:
-            is_selected = (st.session_state.selected_tier == tier_name)
-            tier_display_name = translate_tier_name(tier_name)
-            btn_label = f"▶ {tier_display_name}" if is_selected else tier_display_name
-            if st.button(
-                btn_label,
-                key=f"tier_btn_{tier_name}",
-                use_container_width=True,
-                help=f"{tier_name} 데이터 분석",
-                type="primary" if is_selected else "secondary",
-            ):
-                if st.session_state.selected_tier != tier_name:
-                    st.session_state.selected_tier = tier_name
-                    st.rerun()
-
-    role_filters = ["All"] + roles
-    r_cols = st.columns(len(role_filters))
-    for i, role_name in enumerate(role_filters):
-        with r_cols[i]:
-            is_selected = (st.session_state.selected_role == role_name)
-            role_display_name = translate_role_name(role_name)
-            btn_label = f"▶ {role_display_name}" if is_selected else role_display_name
-            if st.button(
-                btn_label,
-                key=f"role_btn_{role_name}",
-                use_container_width=True,
-                help=f"{role_name} 포지션 데이터 분석",
-                type="primary" if is_selected else "secondary",
-            ):
-                if st.session_state.selected_role != role_name:
-                    st.session_state.selected_role = role_name
-                    st.rerun()
-
-    st.markdown("---")
-    summary_col1, summary_col2 = st.columns([1, 1])
-    with summary_col1:
-        st.markdown(
-            f"**선택된 티어:** <span style='color:{GLOBAL_ACCENT_COLOR}; font-weight:700;'>{translate_tier_name(st.session_state.selected_tier)}</span>",
-            unsafe_allow_html=True,
+    with c1:
+        selected_tier = st.selectbox(
+            "티어",
+            tiers,
+            key="selected_tier",
+            format_func=translate_tier_name,
+            label_visibility="collapsed",
+            placeholder="티어",
         )
-    with summary_col2:
-        st.markdown(
-            f"**선택된 포지션:** <span style='color:{GLOBAL_ACCENT_COLOR}; font-weight:700;'>{translate_role_name(st.session_state.selected_role)}</span>",
-            unsafe_allow_html=True,
+    with c2:
+        selected_role = st.selectbox(
+            "포지션",
+            ["All"] + roles,
+            key="selected_role",
+            format_func=translate_role_name,
+            label_visibility="collapsed",
+            placeholder="포지션",
         )
+    with c3:
+        sort_by = st.selectbox(
+            "정렬",
+            ["종합 점수", "승률", "픽률"],
+            key="sort_by",
+            label_visibility="collapsed",
+            placeholder="정렬",
+        )
+    with c4:
+        search_hero = st.text_input(
+            "영웅 검색",
+            key="search_hero",
+            placeholder="영웅 검색",
+            label_visibility="collapsed",
+        )
+    with c5:
+        st.button("초기화", use_container_width=True, on_click=reset_filters)
 
-    f1, f2, f3 = st.columns([2, 1, 1])
-    with f1:
-        sort_by = st.selectbox("📊 정렬 기준", ["종합 점수", "승률", "픽률"])
-    with f2:
-        search_hero = st.text_input("🔍 영웅 검색")
-    with f3:
-        st.write("\n")
-
-selected_tier = st.session_state.selected_tier
-selected_role = st.session_state.selected_role
 st.divider()
 
 # -------------------------------------------------
@@ -428,6 +486,13 @@ if search_hero:
     df_filtered = df_filtered[
         df_filtered["hero"].str.contains(search_hero, case=False, na=False)
     ].copy()
+
+if "pick_rate_z" in df_filtered.columns and "win_rate_z" in df_filtered.columns:
+    pick_z = pd.to_numeric(df_filtered["pick_rate_z"], errors="coerce")
+    win_z = pd.to_numeric(df_filtered["win_rate_z"], errors="coerce")
+    df_filtered["is_master"] = (pick_z <= -0.5) & (win_z >= 0.5)
+else:
+    df_filtered["is_master"] = False
 
 # -------------------------------------------------
 # 5. 데이터 준비
@@ -527,264 +592,6 @@ def get_hero_image_url(hero_name):
     return portrait_map.get(api_name)
 
 
-@st.cache_data
-def load_map_image_map():
-    url = "https://overfast-api.tekrop.fr/maps"
-    try:
-        with urllib.request.urlopen(url, timeout=20) as resp:
-            maps_data = json.load(resp)
-    except Exception:
-        return {}
-    return {
-        m.get("key", "").lower(): m.get("screenshot")
-        for m in maps_data
-        if m.get("key") and m.get("screenshot")
-    }
-
-
-MAP_ID_ALIAS = {
-    "paraiso": "paraíso",
-    "esperanca": "esperança",
-}
-
-
-def get_map_image_url(map_id):
-    alias = MAP_ID_ALIAS.get(map_id, map_id)
-    image_map = load_map_image_map()
-    url = image_map.get(alias) or image_map.get(map_id)
-    return url if url else f"https://dummyimage.com/600x100/1f2937/475569.png&text={map_id}"
-
-
-DEFAULT_HERO_IMAGE_URL = "https://dummyimage.com/320x320/1f2937/f8fafc.png&text=Hero"
-DEFAULT_PERK_IMAGE_URL = "https://dummyimage.com/48x48/1f2937/94a3b8.png&text=Perk"
-PERK_DATA_PATH = "overwatch_hero_perks.csv"
-
-
-def normalize_hero_key(hero_name):
-    text = str(hero_name).strip().lower()
-    return re.sub(r"[^0-9a-z가-힣]+", "", text)
-
-
-@st.cache_data
-def load_hero_perk_data():
-    if not os.path.exists(PERK_DATA_PATH):
-        return pd.DataFrame()
-
-    try:
-        df = pd.read_csv(PERK_DATA_PATH)
-    except Exception:
-        return pd.DataFrame()
-
-    required_cols = {"hero", "perk_type", "perk_name", "pick_rate"}
-    if not required_cols.issubset(df.columns):
-        return pd.DataFrame()
-
-    if "update_date" in df.columns and not df.empty:
-        df["update_date"] = df["update_date"].astype(str)
-        latest_date = df["update_date"].max()
-        df = df[df["update_date"] == latest_date].copy()
-
-    df["hero_norm"] = df["hero"].astype(str).map(normalize_hero_key)
-    df["perk_type"] = df["perk_type"].astype(str).str.lower()
-    df["pick_rate"] = pd.to_numeric(df["pick_rate"], errors="coerce")
-    return df
-
-
-def get_hero_perk_rows(hero_name):
-    perks_df = load_hero_perk_data()
-    if perks_df.empty:
-        return {"minor": [], "major": []}
-
-    hero_norm = normalize_hero_key(hero_name)
-    hero_perks = perks_df[perks_df["hero_norm"] == hero_norm].copy()
-    if hero_perks.empty:
-        return {"minor": [], "major": []}
-
-    hero_perks = hero_perks.sort_values("pick_rate", ascending=False)
-    minor_rows = hero_perks[hero_perks["perk_type"] == "minor"].head(2).to_dict("records")
-    major_rows = hero_perks[hero_perks["perk_type"] == "major"].head(2).to_dict("records")
-    return {"minor": minor_rows, "major": major_rows}
-
-
-@st.dialog("영웅 상세 정보", width="large")
-def show_hero_detail_dialog(hero_name, hero_role, current_tier, data_df):
-    left_col, right_col = st.columns([1, 2.5], gap="large")
-
-    with left_col:
-        image_url = get_hero_image_url(hero_name) or DEFAULT_HERO_IMAGE_URL
-        st.markdown(
-            f"""
-            <div style="
-                position: relative;
-                width: 182px;
-                padding: 10px;
-                border-radius: 18px;
-                background:
-                    linear-gradient(180deg, rgba(248, 250, 252, 0.08) 0%, rgba(15, 23, 42, 0.92) 18%, rgba(2, 6, 23, 0.98) 100%);
-                border: 1px solid #5b6b84;
-                box-shadow:
-                    0 14px 30px rgba(2, 6, 23, 0.62),
-                    0 0 0 1px rgba(148, 163, 184, 0.18),
-                    0 0 18px rgba(56, 189, 248, 0.24),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.22);
-                margin-bottom: 12px;
-                overflow: hidden;
-            ">
-                <div style="
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    height: 36%;
-                    background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.0) 100%);
-                    pointer-events: none;
-                "></div>
-                <img src="{html.escape(image_url)}" style="
-                    width: 162px;
-                    height: 162px;
-                    object-fit: cover;
-                    border-radius: 12px;
-                    border: 1px solid rgba(148, 163, 184, 0.45);
-                    display: block;
-                    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.85);
-                " />
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            f"""
-            <div style="
-                font-family: {GLOBAL_FONT_FAMILY};
-                font-size: 1.48rem;
-                font-weight: 800;
-                color: #e2ecff;
-                letter-spacing: 0.02em;
-                text-shadow: 0 1px 0 rgba(12, 18, 32, 0.8), 0 0 10px rgba(96, 165, 250, 0.2);
-                line-height: 1.2;
-                margin-top: 6px;
-            ">{html.escape(str(hero_name))}</div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            f"""
-            <div style="
-                display: inline-block;
-                font-family: {GLOBAL_FONT_FAMILY};
-                font-size: 0.9rem;
-                font-weight: 700;
-                color: #bfdbfe;
-                letter-spacing: 0.06em;
-                text-transform: uppercase;
-                margin-top: 8px;
-                background: linear-gradient(180deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
-                border: 1px solid rgba(96, 165, 250, 0.45);
-                border-radius: 999px;
-                padding: 4px 10px;
-                box-shadow: inset 0 1px 0 rgba(255,255,255,0.16);
-            ">{html.escape(translate_role_name(hero_role))}</div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        perk_rows = get_hero_perk_rows(hero_name)
-
-        def render_perk_line(perks, line_title, accent_color):
-            if not perks:
-                return (
-                    f'<div style="margin-top:10px;padding:8px 10px;border:1px dashed #334155;border-radius:10px;color:#94a3b8;font-size:0.8rem;">'
-                    f'{line_title}: 특전 데이터 없음'
-                    f'</div>'
-                )
-
-            numeric_rates = pd.to_numeric(
-                [perk.get("pick_rate") for perk in perks],
-                errors="coerce",
-            )
-            best_idx = int(numeric_rates.argmax()) if len(numeric_rates) and pd.notna(numeric_rates).any() else -1
-
-            cards = []
-            for idx, perk in enumerate(perks):
-                perk_name = html.escape(str(perk.get("perk_name", "-")))
-                perk_rate = perk.get("pick_rate")
-                if pd.notna(perk_rate):
-                    perk_rate_text = f"{float(perk_rate):.0f}%"
-                else:
-                    perk_rate_text = "-"
-                best_mark = "👍 " if idx == best_idx else ""
-
-                perk_image_url = perk.get("perk_image_raw_url") or perk.get("perk_image_url") or DEFAULT_PERK_IMAGE_URL
-                perk_image_url = html.escape(str(perk_image_url))
-
-                cards.append(
-                    f'<div style="display:flex;align-items:center;gap:8px;background:rgba(15,23,42,0.72);border:1px solid #334155;border-radius:10px;padding:6px 8px;margin-top:6px;">'
-                    f'<img src="{perk_image_url}" style="width:28px;height:28px;object-fit:cover;border-radius:6px;border:1px solid #475569;flex-shrink:0;" />'
-                    f'<div style="flex:1;color:#e2e8f0;font-size:0.82rem;font-weight:700;line-height:1.2;">{perk_name}</div>'
-                    f'<div style="color:{accent_color};font-size:0.82rem;font-weight:800;min-width:56px;text-align:right;">{best_mark}{perk_rate_text}</div>'
-                    f'</div>'
-                )
-
-            return (
-                f'<div style="margin-top:10px;">'
-                f'<div style="font-size:0.72rem;font-weight:800;letter-spacing:0.04em;color:{accent_color};text-transform:uppercase;">{line_title}</div>'
-                f'{"".join(cards)}'
-                f'</div>'
-            )
-
-        perk_html = (
-            '<div style="margin-top:12px;">'
-            + render_perk_line(perk_rows["minor"], "Minor Perks", "#67e8f9")
-            + render_perk_line(perk_rows["major"], "Major Perks", "#fbbf24")
-            + '</div>'
-        )
-        st.markdown(perk_html, unsafe_allow_html=True)
-
-    with right_col:
-        st.subheader("🗺️ 전장별 승률")
-
-        hero_map_df = data_df[
-            (data_df["hero"] == hero_name) &
-            (data_df["map"] != "all-maps") &
-            (data_df["data_tier"] == current_tier)
-        ].sort_values("win_rate", ascending=False)
-
-        if hero_map_df.empty:
-            st.info("이 티어의 전장별 데이터가 없습니다.")
-        else:
-            def make_map_card(row, badge_label=None, badge_color="#34d399"):
-                m_id = str(row["map"])
-                m_name = html.escape(str(row.get("map_name", m_id)))
-                w_rate = float(row["win_rate"])
-                p_rate = float(row["pick_rate"])
-                rate_color = "#34d399" if w_rate >= 50 else "#f87171"
-                bg_image = html.escape(get_map_image_url(m_id))
-                badge = (f'<div style="position:absolute;top:8px;right:100px;background:{badge_color}22;border:1px solid {badge_color}88;border-radius:999px;padding:2px 8px;color:{badge_color};font-size:0.68rem;font-weight:700;letter-spacing:0.05em;">{badge_label}</div>' if badge_label else "")
-                return (f'<div style="position:relative;width:100%;height:72px;border-radius:10px;background-image:url(\'{bg_image}\');background-size:cover;background-position:center;margin-bottom:10px;box-shadow:0 4px 10px rgba(0,0,0,0.4);overflow:hidden;">'
-                        f'<div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(15,23,42,0.95) 0%,rgba(15,23,42,0.55) 55%,rgba(15,23,42,0.82) 100%);"></div>'
-                        f'{badge}'
-                        f'<div style="position:absolute;top:50%;left:18px;transform:translateY(-50%);">'
-                        f'<div style="color:#f8fafc;font-size:1.05rem;font-weight:700;letter-spacing:0.01em;line-height:1.2;">{m_name}</div>'
-                        f'<div style="color:#94a3b8;font-size:0.78rem;margin-top:2px;">픽률 {p_rate:.1f}%</div>'
-                        f'</div>'
-                        f'<div style="position:absolute;top:50%;right:18px;transform:translateY(-50%);text-align:right;">'
-                        f'<div style="color:{rate_color};font-size:1.35rem;font-weight:800;line-height:1.1;">{w_rate:.1f}%</div>'
-                        f'<div style="color:#94a3b8;font-size:0.75rem;margin-top:2px;">승률</div>'
-                        f'</div></div>')
-
-            top_win_df  = hero_map_df.nlargest(2, "win_rate")
-            top_pick_df = hero_map_df.nlargest(2, "pick_rate")
-
-            st.markdown("**🏆 Top Winrate**")
-            st.markdown("".join(make_map_card(row, "TOP WIN", "#34d399") for _, row in top_win_df.iterrows()), unsafe_allow_html=True)
-
-            st.markdown("**📈 Top Pickrate**")
-            st.markdown("".join(make_map_card(row, "TOP PICK", "#60a5fa") for _, row in top_pick_df.iterrows()), unsafe_allow_html=True)
-
-            with st.expander(f"모두 보기 ({len(hero_map_df)}개 전장)"):
-                st.markdown("".join(make_map_card(row) for _, row in hero_map_df.iterrows()), unsafe_allow_html=True)
-
-
 def render_rank_table_html(df):
     rank_color_map = {
         "S": "#ef4444",
@@ -806,6 +613,8 @@ def render_rank_table_html(df):
     .overwatch-table .role-cell {text-align: center; color: __GLOBAL_TEXT_COLOR__;}
     .overwatch-table .rate-cell {text-align: left; min-width: 180px;}
     .overwatch-table .rank-cell {text-align: center; font-weight: 900; font-size: 1.38rem; line-height: 1; letter-spacing: 0.01em; padding: 4px 8px; color: __GLOBAL_TEXT_COLOR__;}
+    .artisan-badge {display: inline-block; margin-left: 8px; padding: 2px 7px; border-radius: 999px; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.02em; vertical-align: middle;}
+    .artisan-strong {background: rgba(250, 204, 21, 0.14); color: #fde68a; border: 1px solid rgba(250, 204, 21, 0.36);}
     .rate-bar {background: #1f2937; border-radius: 999px; height: 10px; overflow: hidden; margin-top: 6px;}
     .rate-fill {height: 100%; border-radius: 999px;}
     .rate-fill.pick {background: #60a5fa;}
@@ -828,6 +637,11 @@ def render_rank_table_html(df):
             f"style='color:{GLOBAL_TEXT_COLOR}; text-decoration: underline; text-underline-offset: 3px;'>"
             f"{hero}</a>"
         )
+        is_master = bool(row.get("is_master", False))
+        badge_html = ""
+        if is_master:
+            badge_html = "<span class='artisan-badge artisan-strong'>장인</span>"
+        hero_cell_html = f"{hero_link}{badge_html}"
         role = html.escape(translate_role_name(str(row["role"])))
         win_rate = f"{row['win_rate']:.1f}%"
         pick_rate = f"{row['pick_rate']:.1f}%"
@@ -845,7 +659,7 @@ def render_rank_table_html(df):
             f"<div class='rate-text'>{win_rate}</div>"
         )
         rows.append(
-            f"<tr><td class='portrait-cell'>{img_html}</td><td class='hero-cell'>{hero_link}</td><td class='role-cell'>{role}</td><td class='rate-cell'>{win_html}</td><td class='rate-cell'>{pick_html}</td><td class='rank-cell' style='color:{rank_color};'>{rank}</td></tr>"
+            f"<tr><td class='portrait-cell'>{img_html}</td><td class='hero-cell'>{hero_cell_html}</td><td class='role-cell'>{role}</td><td class='rate-cell'>{win_html}</td><td class='rate-cell'>{pick_html}</td><td class='rank-cell' style='color:{rank_color};'>{rank}</td></tr>"
         )
     table_html = (
         styles
@@ -907,174 +721,8 @@ with m3:
 
 st.divider()
 
-# -------------------------------------------------
-# 11. 메인 시각화
-# -------------------------------------------------
-
-st.subheader("🚀 픽률 vs 승률 분포")
-pick_center = df_filtered["pick_rate"].mean()
-win_center = df_filtered["win_rate"].mean()
-x_min = df_filtered["pick_rate"].min()
-x_max = df_filtered["pick_rate"].max()
-y_min = df_filtered["win_rate"].min()
-y_max = df_filtered["win_rate"].max()
-
-fig = px.scatter(
-    df_filtered,
-    x="pick_rate",
-    y="win_rate",
-    color="rank",
-    size="display_size",
-    hover_name="hero",
-    text="hero",
-    category_orders={
-        "rank": ["S", "A", "B", "C"]
-    },
-    color_discrete_map={
-        "S": "#FF4B4B",
-        "A": "#FFA500",
-        "B": "#2ECC71",
-        "C": "#3498DB"
-    },
-    labels={
-        "pick_rate": "픽률 (%)",
-        "win_rate": "승률 (%)",
-        "rank": "영웅 랭크"
-    }
-)
-
-fig.add_shape(
-    type="line",
-    x0=pick_center,
-    x1=pick_center,
-    y0=y_min,
-    y1=y_max,
-    line=dict(color="gray", width=1, dash="dash"),
-    xref="x",
-    yref="y"
-)
-fig.add_shape(
-    type="line",
-    x0=x_min,
-    x1=x_max,
-    y0=win_center,
-    y1=win_center,
-    line=dict(color="gray", width=1, dash="dash"),
-    xref="x",
-    yref="y"
-)
-
-fig.add_annotation(
-    x=x_max,
-    y=win_center,
-    text="Popular",
-    showarrow=False,
-    xanchor="right",
-    yanchor="bottom",
-    font=dict(color="#4b5563", size=12),
-    bgcolor="rgba(255,255,255,0.8)"
-)
-fig.add_annotation(
-    x=pick_center,
-    y=y_max,
-    text="Strong",
-    showarrow=False,
-    xanchor="left",
-    yanchor="top",
-    font=dict(color="#4b5563", size=12),
-    bgcolor="rgba(255,255,255,0.8)"
-)
-fig.add_annotation(
-    x=x_max,
-    y=y_max,
-    text="Strong + Popular",
-    showarrow=False,
-    xanchor="right",
-    yanchor="top",
-    font=dict(color="#111827", size=12, family="Arial, sans-serif", weight="bold"),
-    bgcolor="rgba(255,255,255,0.9)"
-)
-
-fig.update_traces(
-    textposition="top center",
-    marker=dict(line=dict(width=1, color="black")),
-    hovertemplate="<b>%{customdata}</b><br>픽률: %{x:.2f}%<br>승률: %{y:.2f}%<extra></extra>",
-    customdata=df_filtered["hero"]
-)
-fig.update_layout(
-    font=dict(family=GLOBAL_FONT_FAMILY, size=13, color=GLOBAL_TEXT_COLOR),
-    paper_bgcolor=GLOBAL_BG_COLOR,
-    plot_bgcolor=GLOBAL_BG_COLOR,
-    dragmode=False,
-    hovermode='closest'
-)
-
-st.plotly_chart(
-    fig,
-    use_container_width=True,
-    config={"staticPlot": True}
-)
-
-st.subheader("💡 역할별 랭크 비중")
-df_role_base = df_raw[
-    (df_raw["data_tier"] == selected_tier) &
-    (df_raw["map"] == "all-maps")
-].copy()
-
-role_rank_distribution = (
-    df_role_base
-    .groupby(["role", "rank"])["hero"]
-    .count()
-    .reset_index(name="count")
-)
-
-pie_color_map = {
-    "S": "#FF4B4B",
-    "A": "#FFA500",
-    "B": "#2ECC71",
-    "C": "#3498DB",
-}
-
-role_cols = st.columns(3)
-for col, role_name in zip(role_cols, roles):
-    with col:
-        role_label = translate_role_name(role_name)
-        one_role = role_rank_distribution[role_rank_distribution["role"] == role_name].copy()
-
-        if one_role.empty:
-            st.info(f"{role_label} 데이터 없음")
-            continue
-
-        fig_role_pie = px.pie(
-            one_role,
-            names="rank",
-            values="count",
-            color="rank",
-            hole=0.48,
-            category_orders={"rank": ["S", "A", "B", "C"]},
-            color_discrete_map=pie_color_map,
-        )
-        fig_role_pie.update_traces(
-            textposition="inside",
-            textinfo="percent+label",
-            textfont=dict(size=22, family=GLOBAL_FONT_FAMILY),
-            hovertemplate=f"포지션: {role_label}<br>랭크: %{{label}}<br>비율: %{{percent}}<extra></extra>",
-        )
-        fig_role_pie.update_layout(
-            title=f"{role_label}",
-            title_x=0.5,
-            margin=dict(l=10, r=10, t=45, b=10),
-            showlegend=False,
-            font=dict(family=GLOBAL_FONT_FAMILY, size=12, color=GLOBAL_TEXT_COLOR),
-            paper_bgcolor=GLOBAL_BG_COLOR,
-            plot_bgcolor=GLOBAL_BG_COLOR,
-            dragmode=False,
-        )
-        st.plotly_chart(fig_role_pie, use_container_width=True, config={"staticPlot": True})
-
-st.divider()
-
-st.subheader("🏆 영웅 랭크 순위표 (S~C)")
+st.subheader("🏆 영웅 랭크 순위표")
+st.caption("영웅 이름을 클릭하면 상세 페이지로 이동합니다.")
 
 sort_col = {
     "종합 점수": "total_score",
@@ -1090,14 +738,33 @@ display_df = df_filtered.sort_values(
     "role",
     "win_rate",
     "pick_rate",
-    "rank"
+    "rank",
+    "is_master",
 ]]
 
 if not display_df.empty:
     st.markdown(render_rank_table_html(display_df), unsafe_allow_html=True)
-    st.caption("영웅 이름을 클릭하면 상세 팝업이 열립니다.")
 else:
     st.info("선택한 조건에 해당하는 영웅이 없습니다.")
+
+with st.expander("랭크는 어떻게 산정되나요?"):
+    st.markdown(
+        """
+        - 랭크는 티어/포지션/전장(all-maps) 필터 기준의 종합 지표로 산정됩니다.
+        - 기본적으로 승률과 픽률 기반 점수를 함께 반영해 `S > A > B > C`로 구간화합니다.
+        - 표의 정렬 기준(종합 점수/승률/픽률)을 바꾸면 같은 집합 내 우선순위가 달라집니다.
+        - 데이터는 최신 수집일 기준으로만 비교됩니다.
+        """
+    )
+
+with st.expander("장인챔프는 뭔가요?"):
+    st.markdown(
+        """
+        - 장인챔프는 **낮은 픽률 대비 높은 승률**을 보이는 영웅입니다.
+        - 현재 기준: `pick_rate_z <= -0.5` and `win_rate_z >= 0.5`
+        - 즉, 평균보다 덜 선택되지만 성과가 높은 영웅을 뜻합니다.
+        """
+    )
 
 hero_from_query = st.query_params.get("hero")
 if isinstance(hero_from_query, list):
@@ -1105,13 +772,10 @@ if isinstance(hero_from_query, list):
 
 if hero_from_query:
     hero_from_query = urllib.parse.unquote(str(hero_from_query))
-    if "hero" in st.query_params:
-        del st.query_params["hero"]
     hero_row = display_df[display_df["hero"].astype(str) == hero_from_query]
     if not hero_row.empty:
-        show_hero_detail_dialog(
-            hero_from_query,
-            str(hero_row.iloc[0]["role"]),
-            selected_tier,
-            df_raw,
-        )
+        st.session_state.detail_hero = hero_from_query
+        st.session_state.detail_tier = selected_tier
+        st.session_state.detail_source = "main"
+        if hasattr(st, "switch_page"):
+            st.switch_page("pages/3_hero_detail.py")
