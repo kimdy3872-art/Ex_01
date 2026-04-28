@@ -189,10 +189,50 @@ st.markdown(
         border-radius: 12px !important;
     }}
     [data-testid="stExpander"] summary {{
+        font-size: 1.02rem !important;
+        font-weight: 700 !important;
+        line-height: 1.35 !important;
         color: var(--app-text) !important;
+        -webkit-text-fill-color: var(--app-text) !important;
+        background-color: transparent !important;
+    }}
+    [data-testid="stExpander"] details[open] > summary,
+    [data-testid="stExpander"] details[open] > summary * {{
+        color: var(--app-text) !important;
+        -webkit-text-fill-color: var(--app-text) !important;
+        background-color: transparent !important;
     }}
     [data-testid="stExpander"] summary:hover {{
         background-color: rgba(59, 130, 246, 0.1) !important;
+    }}
+    [data-testid="stExpander"] summary p {{
+        margin: 0 !important;
+        line-height: 1.35 !important;
+    }}
+    [data-testid="stIconMaterial"],
+    [data-testid="stExpander"] summary span[class*="material"] {{
+        font-family: "Material Symbols Rounded", "Material Symbols Outlined", "Material Icons" !important;
+    }}
+    [data-testid="stExpander"] [data-testid="stMarkdownContainer"] p {{
+        margin-top: 0 !important;
+        margin-bottom: 0.55rem !important;
+        line-height: 1.65 !important;
+    }}
+    [data-testid="stExpander"] [data-testid="stMarkdownContainer"] p:last-child {{
+        margin-bottom: 0 !important;
+    }}
+    [data-testid="stExpander"] [data-testid="stMarkdownContainer"] li {{
+        margin-bottom: 0.35rem !important;
+        line-height: 1.65 !important;
+    }}
+    [data-testid="stExpander"] [data-testid="stMarkdownContainer"] li:last-child {{
+        margin-bottom: 0 !important;
+    }}
+    [data-testid="stExpander"] [data-testid="stMarkdownContainer"] ul,
+    [data-testid="stExpander"] [data-testid="stMarkdownContainer"] ol {{
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding-left: 1.4rem !important;
     }}
     </style>
     """,
@@ -343,3 +383,24 @@ for col, role_name in zip(role_cols, ["Tank", "Damage", "Support"]):
             dragmode=False,
         )
         st.plotly_chart(fig_role_pie, use_container_width=True, config={"staticPlot": True})
+
+st.divider()
+
+with st.expander("이 페이지는 어떤 정보를 보여주나요?"):
+    st.markdown(
+        """- **역할별 랭크 비중** 차트는 선택한 티어에서 각 포지션(돌격·공격·지원) 영웅들이 `S / A / B / C` 랭크에 얼마나 분포하는지 보여줍니다.
+- 원형 차트 안의 숫자는 해당 랭크가 해당 포지션 전체 영웅 수 대비 차지하는 **비율(%)**입니다.
+- 랭크는 메인 페이지와 동일한 기준(승률 Z점수 + 픽률 로그 Z점수 기반 종합 점수)으로 산정됩니다.
+- 티어 드롭다운을 변경하면 해당 티어 기준 분포로 즉시 갱신됩니다."""
+    )
+
+with st.expander("차트 해석 가이드"):
+    st.markdown(
+        """**S·A 비율이 높은 포지션** → 현재 메타에서 강세인 포지션입니다. 해당 포지션 영웅 픽을 우선 고려하세요.
+
+**C 비율이 높은 포지션** → 성능 편차가 크거나 전반적으로 하향세인 포지션입니다. 영웅 선택에 주의가 필요합니다.
+
+**티어별 비교 팁**
+- 낮은 티어(브론즈·실버)와 높은 티어(마스터·그랜드마스터)의 분포 차이를 비교하면 **숙련도 의존성**이 높은 포지션을 파악할 수 있습니다.
+- 예: 공격 포지션이 낮은 티어에선 C가 많고 높은 티어에선 S·A가 많다면, 조작 난이도가 높은 영웅이 집중된 포지션일 가능성이 높습니다."""
+    )
