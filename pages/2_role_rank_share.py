@@ -32,6 +32,9 @@ st.markdown(
         --text-color: {GLOBAL_TEXT_COLOR};
         --font: {GLOBAL_FONT_FAMILY};
     }}
+    html, body {{
+        color-scheme: dark !important;
+    }}
     html, body, .stApp,
     [data-testid="stAppViewContainer"],
     [data-testid="stHeader"] {{
@@ -90,40 +93,68 @@ st.markdown(
         opacity: 1 !important;
         filter: none !important;
     }}
+    /* Inputs: selectbox + search */
+    .stTextInput input,
+    .stNumberInput input,
+    .stTextArea textarea,
     .stSelectbox [data-baseweb="select"] > div,
+    .stSelectbox [data-baseweb="select"] input,
+    .stSelectbox [data-baseweb="select"] span,
     div[data-baseweb="select"] > div,
-    [data-baseweb="popover"] {{
+    div[data-baseweb="select"] input,
+    div[data-baseweb="select"] span {{
+        background-color: var(--app-surface) !important;
+        color: var(--app-text) !important;
+        -webkit-text-fill-color: var(--app-text) !important;
+        border: 1px solid var(--app-border) !important;
+        border-radius: 12px !important;
+        opacity: 1 !important;
+    }}
+    .stSelectbox svg,
+    div[data-baseweb="select"] svg {{
+        fill: var(--app-text) !important;
+        color: var(--app-text) !important;
+    }}
+    .stTextInput input::placeholder,
+    .stTextArea textarea::placeholder,
+    .stSelectbox input::placeholder,
+    div[data-baseweb="select"] input::placeholder {{
+        color: var(--app-text-muted) !important;
+        -webkit-text-fill-color: var(--app-text-muted) !important;
+        opacity: 1 !important;
+    }}
+    .stTextInput input:focus,
+    .stNumberInput input:focus,
+    .stTextArea textarea:focus,
+    .stSelectbox [data-baseweb="select"] > div:focus-within,
+    div[data-baseweb="select"] > div:focus-within {{
+        border-color: var(--app-accent) !important;
+        box-shadow: 0 0 0 1px var(--app-accent) !important;
+    }}
+
+    /* Dropdown popup and options */
+    [data-baseweb="popover"],
+    [data-baseweb="menu"],
+    [role="listbox"],
+    ul[role="listbox"] {{
         background-color: var(--app-surface) !important;
         color: var(--app-text) !important;
         border: 1px solid var(--app-border) !important;
         border-radius: 12px !important;
-    }}
-    .stSelectbox input,
-    [data-baseweb="input"] input {{
-        background-color: var(--app-surface) !important;
-        color: var(--app-text) !important;
-        caret-color: var(--app-accent) !important;
-    }}
-    .stSelectbox [data-baseweb="input"] input:focus,
-    [data-baseweb="input"] input:focus {{
-        background-color: var(--app-surface) !important;
-        border-color: var(--app-accent) !important;
-        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
-    }}
-    [data-baseweb="popover"] [role="listbox"],
-    [data-baseweb="popover"] [role="menu"] {{
-        background-color: var(--app-surface) !important;
+        opacity: 1 !important;
     }}
     [role="option"],
-    [role="menuitem"] {{
+    li[role="option"] {{
+        background-color: var(--app-surface) !important;
         color: var(--app-text) !important;
+        -webkit-text-fill-color: var(--app-text) !important;
     }}
     [role="option"]:hover,
-    [role="menuitem"]:hover {{
+    li[role="option"]:hover {{
         background-color: rgba(59, 130, 246, 0.2) !important;
     }}
     [role="option"][aria-selected="true"],
-    [role="menuitem"][aria-selected="true"] {{
+    li[role="option"][aria-selected="true"] {{
         background-color: rgba(59, 130, 246, 0.35) !important;
         color: var(--app-text) !important;
     }}
