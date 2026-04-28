@@ -193,10 +193,13 @@ st.markdown(
         line-height: 1.3 !important;
         color: var(--app-text) !important;
         -webkit-text-fill-color: var(--app-text) !important;
+        background-color: transparent !important;
     }}
-    [data-testid="stExpander"] summary * {{
+    [data-testid="stExpander"] details[open] > summary,
+    [data-testid="stExpander"] details[open] > summary * {{
         color: var(--app-text) !important;
         -webkit-text-fill-color: var(--app-text) !important;
+        background-color: transparent !important;
     }}
     [data-testid="stExpander"] summary:hover {{
         background-color: rgba(59, 130, 246, 0.1) !important;
@@ -206,14 +209,6 @@ st.markdown(
     }}
     [data-testid="stExpander"] [data-testid="stIconMaterial"] {{
         display: none !important;
-    }}
-    [data-testid="stExpander"] [data-testid="stExpanderDetails"],
-    [data-testid="stExpander"] [data-testid="stMarkdownContainer"],
-    [data-testid="stExpander"] p,
-    [data-testid="stExpander"] li,
-    [data-testid="stExpander"] span {{
-        color: var(--app-text) !important;
-        -webkit-text-fill-color: var(--app-text) !important;
     }}
     [data-testid="stExpander"] summary span[class*="material"],
     [data-testid="stIconMaterial"] {{
