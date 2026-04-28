@@ -11,11 +11,10 @@ from urllib.parse import parse_qs, unquote, urljoin, urlparse
 import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
+from selenium.common.exceptions import SessionNotCreatedException, WebDriverException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from webdriver_manager.chrome import ChromeDriverManager
 
 BASE_URL = "https://owperks.com"
 DEFAULT_LOCALE = "ko"
@@ -31,15 +30,27 @@ HERO_LINK_RE = re.compile(r"^https://owperks\.com/ko/(tanks|damages|supports)/([
 
 
 def create_driver(headless: bool = True) -> webdriver.Chrome:
-    opts = Options()
-    if headless:
-        opts.add_argument("--headless=new")
-    opts.add_argument("--no-sandbox")
-    opts.add_argument("--disable-dev-shm-usage")
-    opts.add_argument("--disable-gpu")
-    opts.add_argument("--disable-extensions")
-    opts.add_argument("--window-size=1920,1080")
-    return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=opts)
+    last_error: Exception | None = None
+    for attempt in range(1, 4):
+        try:
+            opts = Options()
+            if headless:
+                opts.add_argument("--headless=new")
+            opts.add_argument("--no-sandbox")
+            opts.add_argument("--disable-dev-shm-usage")
+            opts.add_argument("--disable-gpu")
+            opts.add_argument("--disable-extensions")
+            opts.add_argument("--remote-debugging-pipe")
+            opts.add_argument("--window-size=1920,1080")
+            return webdriver.Chrome(options=opts)
+        except (SessionNotCreatedException, WebDriverException) as exc:
+            last_error = exc
+            if attempt < 3:
+                time.sleep(attempt * 2)
+                continue
+            break
+
+    raise RuntimeError(f"Chrome 세션 생성 실패: {last_error}")
 
 
 def parse_args() -> argparse.Namespace:
