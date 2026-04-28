@@ -93,7 +93,7 @@ python update.py
 - Blizzard 경쟁전 통계를 수집해 overwatch_competitive_stats.csv를 갱신합니다.
 - 동일 날짜에 재수집 시 중복을 제거하고 최신 값을 유지합니다.
 
-### 영웅 퍼크 데이터 갱신
+### 영웅 특전 데이터 갱신
 
 ```bash
 python update_perk.py
