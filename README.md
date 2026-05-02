@@ -17,7 +17,7 @@
   - 특정 영웅의 상세 지표와 관련 정보 확인
 - 데이터 수집 자동화 스크립트
   - 경쟁전 메타 데이터 수집: update.py
-  - 영웅 특전 데이터 수집: update_perk.py
+  - 영웅 퍼크 데이터 수집: update_perk.py
 
 ## 사용 기술
 
@@ -93,7 +93,7 @@ python update.py
 - Blizzard 경쟁전 통계를 수집해 overwatch_competitive_stats.csv를 갱신합니다.
 - 동일 날짜에 재수집 시 중복을 제거하고 최신 값을 유지합니다.
 
-### 영웅 특전 데이터 갱신
+### 영웅 퍼크 데이터 갱신
 
 ```bash
 python update_perk.py
@@ -130,6 +130,8 @@ python update_perk.py --locale ko --output overwatch_hero_perks.csv
 - Streamlit은 최신 수집일(update_date) 데이터를 중심으로 시각화합니다.
 
 ## 향후 개선 아이디어
+
+- GitHub Actions를 이용한 정기 데이터 수집 자동화
 - 테스트 코드 및 데이터 검증 파이프라인 추가
 - 시계열 변화(일자별 메타 변화) 페이지 추가
 

@@ -356,10 +356,41 @@ st.markdown("<div style='height: 0.4rem;'></div>", unsafe_allow_html=True)
 @st.cache_data
 def load_data():
     df = pd.read_csv("overwatch_competitive_stats.csv")
+
+    def is_degenerate_snapshot(snapshot_df):
+        if snapshot_df.empty:
+            return True
+
+        map_rows = snapshot_df[snapshot_df["map"].astype(str) != "all-maps"].copy()
+        if map_rows.empty:
+            return False
+
+        map_rows["win_rate"] = pd.to_numeric(map_rows.get("win_rate"), errors="coerce")
+        map_rows["pick_rate"] = pd.to_numeric(map_rows.get("pick_rate"), errors="coerce")
+
+        group_cols = ["hero", "data_tier"]
+        win_nunique = map_rows.groupby(group_cols)["win_rate"].nunique(dropna=True)
+        pick_nunique = map_rows.groupby(group_cols)["pick_rate"].nunique(dropna=True)
+        if win_nunique.empty or pick_nunique.empty:
+            return False
+
+        no_win_variance_ratio = (win_nunique <= 1).mean()
+        no_pick_variance_ratio = (pick_nunique <= 1).mean()
+        return no_win_variance_ratio >= 0.98 and no_pick_variance_ratio >= 0.98
+
     if "update_date" in df.columns and not df.empty:
         df["update_date"] = df["update_date"].astype(str)
-        latest_date = df["update_date"].max()
-        df = df[df["update_date"] == latest_date].copy()
+        selected_date = None
+        for candidate_date in sorted(df["update_date"].dropna().unique(), reverse=True):
+            candidate_df = df[df["update_date"] == candidate_date].copy()
+            if not is_degenerate_snapshot(candidate_df):
+                selected_date = candidate_date
+                break
+
+        if selected_date is None:
+            selected_date = df["update_date"].max()
+
+        df = df[df["update_date"] == selected_date].copy()
 
     if "map" not in df.columns:
         df["map"] = "all-maps"

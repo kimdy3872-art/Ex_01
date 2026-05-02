@@ -12,6 +12,7 @@ import time
 from time import perf_counter
 from datetime import date
 import os
+from urllib.parse import urlencode, urlparse, parse_qs
 
 # 1. 영웅별 포지션 매핑 딕셔너리
 role_dict = {
@@ -32,7 +33,7 @@ role_dict = {
 }
 
 # 2. 티어 리스트 정의
-tiers = ["All", "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master", "Grandmaster & Champion"]
+tiers = ["All", "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master", "Grandmaster"]
 
 map_dict = {
     "all-maps": "전체 전장",
@@ -82,10 +83,17 @@ STATS_COLUMNS = [
     'win_rate', 'pick_rate', 'win_rate_z', 'pick_rate_log', 'pick_rate_z', 'total_score', 'rank',
 ]
 
-DEFAULT_MAX_WORKERS = 2 if os.getenv("GITHUB_ACTIONS") == "true" else 4
+DEFAULT_MAX_WORKERS = 2
 MAX_WORKERS = int(os.getenv("MAX_WORKERS", str(DEFAULT_MAX_WORKERS)))
 DRIVER_CREATE_RETRIES = 3
 TASK_RETRIES = 2
+MIN_HERO_ROWS = 20
+
+
+def normalize_tier_name(tier_name):
+    if tier_name in ["Grandmaster % Champion", "Grandmaster & Champion"]:
+        return "Grandmaster"
+    return tier_name
 
 def format_elapsed(seconds):
     total_seconds = int(round(seconds))
@@ -137,14 +145,83 @@ def normalize_dataset_for_scoring(df):
     return df
 
 
+def build_rates_url(map_id, tier_name):
+    params = {
+        "input": "PC",
+        "map": map_id,
+        "region": "Asia",
+        "role": "All",
+        "rq": "1",
+        "tier": normalize_tier_name(tier_name),
+    }
+    return "https://overwatch.blizzard.com/ko-kr/rates/?" + urlencode(params)
+
+
+def page_context_matches(driver, expected_map, expected_tier):
+    parsed = urlparse(driver.current_url)
+    query = parse_qs(parsed.query)
+    actual_map = query.get("map", [""])[0]
+    actual_tier = query.get("tier", [""])[0]
+    return actual_map == expected_map and actual_tier == expected_tier
+
+
+def validate_scraped_df(df):
+    if df.empty:
+        return False, "빈 DataFrame"
+
+    if "hero" not in df.columns or "win_rate" not in df.columns or "pick_rate" not in df.columns:
+        return False, "필수 컬럼 누락"
+
+    if len(df) < MIN_HERO_ROWS:
+        return False, f"영웅 행 수 부족({len(df)}행)"
+
+    if df["hero"].astype(str).nunique() < MIN_HERO_ROWS:
+        return False, "영웅 고유 개수 부족"
+
+    win = pd.to_numeric(df["win_rate"].astype(str).str.replace('%', '', regex=False).replace('--', '0'), errors="coerce")
+    pick = pd.to_numeric(df["pick_rate"].astype(str).str.replace('%', '', regex=False).replace('--', '0'), errors="coerce")
+
+    if win.notna().sum() < MIN_HERO_ROWS or pick.notna().sum() < MIN_HERO_ROWS:
+        return False, "승률/픽률 숫자 변환 실패"
+
+    if win.nunique(dropna=True) <= 1 and pick.nunique(dropna=True) <= 1:
+        return False, "승률/픽률 분산 없음"
+
+    return True, "ok"
+
+
+def is_degenerate_snapshot(df):
+    if df.empty:
+        return True
+
+    map_rows = df[df['map'].astype(str) != 'all-maps'].copy()
+    if map_rows.empty:
+        return True
+
+    map_rows['win_rate'] = pd.to_numeric(map_rows['win_rate'], errors='coerce')
+    map_rows['pick_rate'] = pd.to_numeric(map_rows['pick_rate'], errors='coerce')
+
+    by_hero_tier_win = map_rows.groupby(['hero', 'data_tier'])['win_rate'].nunique(dropna=True)
+    by_hero_tier_pick = map_rows.groupby(['hero', 'data_tier'])['pick_rate'].nunique(dropna=True)
+
+    if by_hero_tier_win.empty or by_hero_tier_pick.empty:
+        return True
+
+    no_win_variance_ratio = (by_hero_tier_win <= 1).mean()
+    no_pick_variance_ratio = (by_hero_tier_pick <= 1).mean()
+    return no_win_variance_ratio >= 0.98 and no_pick_variance_ratio >= 0.98
+
+
 def scrape_data(driver, tier_name, map_id):
     """기존 드라이버로 특정 티어 + 전장 데이터 수집"""
-    url = (f"https://overwatch.blizzard.com/ko-kr/rates/"
-           f"?input=PC&map={map_id}&region=Asia&role=All&rq=2&tier={tier_name}")
+    url = build_rates_url(map_id, tier_name)
     try:
         driver.get(url)
         wait = WebDriverWait(driver, 20)
         wait.until(EC.presence_of_element_located((By.CLASS_NAME, "hero-name")))
+        if not page_context_matches(driver, map_id, tier_name):
+            print(f"⚠️  페이지 파라미터 불일치: 요청 map={map_id}, tier={tier_name} / 현재 URL={driver.current_url}")
+            return pd.DataFrame()
         time.sleep(2)
 
         script = """
@@ -163,12 +240,14 @@ def scrape_data(driver, tier_name, map_id):
         """
         hero_list = driver.execute_script(script)
         df = pd.DataFrame(hero_list)
+        ok, reason = validate_scraped_df(df)
+        if not ok:
+            print(f"⚠️  수집 검증 실패({tier_name}/{map_id}): {reason}")
+            return pd.DataFrame()
 
         if not df.empty:
             df['role'] = df['hero'].map(role_dict)
-            df['data_tier'] = tier_name
-            if tier_name in ["Grandmaster % Champion", "Grandmaster & Champion"]:
-                df['data_tier'] = 'Grandmaster'
+            df['data_tier'] = normalize_tier_name(tier_name)
             df['map'] = map_id
             df['map_name'] = df['map'].map(map_dict)
             df['update_date'] = str(date.today())
@@ -225,6 +304,7 @@ def main():
     print(f"🧵 병렬 수집 시작: worker={MAX_WORKERS}, task={total}")
 
     final_list = []
+    failed_tasks = []
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = {executor.submit(scrape_task, task): task for task in tasks}
         for done, future in enumerate(as_completed(futures), start=1):
@@ -235,9 +315,16 @@ def main():
                 print(f"⚠️  누락 영웅: {result['missing']}")
             if not result['df'].empty:
                 final_list.append(result['df'])
+            else:
+                failed_tasks.append((tier_name, map_id))
 
     if not final_list:
         print("❌ 수집된 데이터가 없습니다.")
+        return
+
+    if failed_tasks:
+        print(f"❌ 실패한 작업이 있어 저장을 중단합니다. 실패 수: {len(failed_tasks)}/{total}")
+        print(f"❌ 실패 목록: {failed_tasks[:20]}{' ...' if len(failed_tasks) > 20 else ''}")
         return
 
     # 데이터 통합
@@ -268,6 +355,10 @@ def main():
     full_df['rank'] = full_df.groupby(group_key)['total_score'].transform(assign_rank)
     full_df = normalize_dataset_for_scoring(full_df)
     full_df = full_df.reindex(columns=STATS_COLUMNS)
+
+    if is_degenerate_snapshot(full_df):
+        print("❌ 비정상 스냅샷 감지(전장별 분산 부족). 저장을 중단합니다.")
+        return
 
     today = str(date.today())
 
