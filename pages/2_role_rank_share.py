@@ -1,243 +1,17 @@
 import streamlit as st
 import plotly.express as px
 import pandas as pd
+from ui import (
+    GLOBAL_BG_COLOR,
+    GLOBAL_FONT_FAMILY,
+    GLOBAL_TEXT_COLOR,
+    apply_global_theme,
+    render_page_hero,
+    render_top_navigation,
+)
 
 st.set_page_config(page_title="역할별 랭크 비중", layout="wide")
-
-GLOBAL_BG_COLOR = "#0f172a"
-GLOBAL_TEXT_COLOR = "#f8fafc"
-GLOBAL_SURFACE_COLOR = "#111827"
-GLOBAL_BORDER_COLOR = "#334155"
-GLOBAL_MUTED_TEXT_COLOR = "#94a3b8"
-GLOBAL_ACCENT_COLOR = "#3b82f6"
-GLOBAL_FONT_FAMILY = "'Pretendard Variable', 'Pretendard', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Segoe UI', sans-serif"
-
-st.markdown(
-    f"""
-    <style>
-    :root,
-    [data-theme="light"],
-    [data-theme="dark"] {{
-        color-scheme: dark !important;
-        --app-bg: {GLOBAL_BG_COLOR};
-        --app-surface: {GLOBAL_SURFACE_COLOR};
-        --app-border: {GLOBAL_BORDER_COLOR};
-        --app-text: {GLOBAL_TEXT_COLOR};
-        --app-text-muted: {GLOBAL_MUTED_TEXT_COLOR};
-        --app-accent: {GLOBAL_ACCENT_COLOR};
-        --app-font: {GLOBAL_FONT_FAMILY};
-        --primary-color: {GLOBAL_ACCENT_COLOR};
-        --background-color: {GLOBAL_BG_COLOR};
-        --secondary-background-color: {GLOBAL_SURFACE_COLOR};
-        --text-color: {GLOBAL_TEXT_COLOR};
-        --font: {GLOBAL_FONT_FAMILY};
-    }}
-    html, body {{
-        color-scheme: dark !important;
-    }}
-    html, body, .stApp,
-    [data-testid="stAppViewContainer"],
-    [data-testid="stHeader"] {{
-        background-color: var(--app-bg) !important;
-        color: var(--app-text) !important;
-    }}
-    [data-testid="stSidebarNav"],
-    [data-testid="stSidebar"],
-    .sidebar,
-    [aria-label="Sidebar"] {{
-        display: none !important;
-    }}
-    [data-testid="stSidebarCollapseButton"],
-    [data-testid="stSidebarToggleButton"],
-    button[aria-label="Open sidebar"],
-    button[aria-label="Close sidebar"] {{
-        display: none !important;
-    }}
-    body, .stApp, [data-testid="stMarkdownContainer"], [data-testid="stText"], p, span, div, label {{
-        font-family: var(--app-font) !important;
-    }}
-    .stButton > button,
-    div[data-testid="stButton"] > button,
-    button[data-testid^="stBaseButton-"] {{
-        border-radius: 12px !important;
-        font-weight: 600 !important;
-        min-height: 40px !important;
-        transition: background-color 0.2s ease, border-color 0.2s ease;
-    }}
-    .stButton > button[kind="secondary"],
-    button[data-testid="stBaseButton-secondary"] {{
-        background-color: #0b1220 !important;
-        color: var(--app-text) !important;
-        border: 1px solid var(--app-border) !important;
-        -webkit-text-fill-color: var(--app-text) !important;
-    }}
-    .stButton > button[kind="secondary"]:hover,
-    button[data-testid="stBaseButton-secondary"]:hover {{
-        background-color: var(--app-surface) !important;
-        border-color: #1e293b !important;
-    }}
-    .stButton > button[kind="primary"],
-    button[data-testid="stBaseButton-primary"] {{
-        background-color: var(--app-accent) !important;
-        border-color: #60a5fa !important;
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
-        box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.35), 0 0 0 4px rgba(59, 130, 246, 0.2) !important;
-    }}
-    .stButton > button[kind="primary"]:disabled,
-    button[data-testid="stBaseButton-primary"]:disabled {{
-        background-color: var(--app-accent) !important;
-        border-color: #60a5fa !important;
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
-        opacity: 1 !important;
-        filter: none !important;
-    }}
-    /* Inputs: selectbox + search */
-    .stTextInput input,
-    .stNumberInput input,
-    .stTextArea textarea,
-    .stSelectbox [data-baseweb="select"] > div,
-    .stSelectbox [data-baseweb="select"] input,
-    .stSelectbox [data-baseweb="select"] span,
-    div[data-baseweb="select"] > div,
-    div[data-baseweb="select"] input,
-    div[data-baseweb="select"] span {{
-        background-color: var(--app-surface) !important;
-        color: var(--app-text) !important;
-        -webkit-text-fill-color: var(--app-text) !important;
-        border: 1px solid var(--app-border) !important;
-        border-radius: 12px !important;
-        opacity: 1 !important;
-    }}
-    .stSelectbox svg,
-    div[data-baseweb="select"] svg {{
-        fill: var(--app-text) !important;
-        color: var(--app-text) !important;
-    }}
-    .stTextInput input::placeholder,
-    .stTextArea textarea::placeholder,
-    .stSelectbox input::placeholder,
-    div[data-baseweb="select"] input::placeholder {{
-        color: var(--app-text-muted) !important;
-        -webkit-text-fill-color: var(--app-text-muted) !important;
-        opacity: 1 !important;
-    }}
-    .stTextInput input:focus,
-    .stNumberInput input:focus,
-    .stTextArea textarea:focus,
-    .stSelectbox [data-baseweb="select"] > div:focus-within,
-    div[data-baseweb="select"] > div:focus-within {{
-        border-color: var(--app-accent) !important;
-        box-shadow: 0 0 0 1px var(--app-accent) !important;
-    }}
-
-    /* Dropdown popup and options */
-    [data-baseweb="popover"],
-    [data-baseweb="menu"],
-    [role="listbox"],
-    ul[role="listbox"] {{
-        background-color: var(--app-surface) !important;
-        color: var(--app-text) !important;
-        border: 1px solid var(--app-border) !important;
-        border-radius: 12px !important;
-        opacity: 1 !important;
-    }}
-    [role="option"],
-    li[role="option"] {{
-        background-color: var(--app-surface) !important;
-        color: var(--app-text) !important;
-        -webkit-text-fill-color: var(--app-text) !important;
-    }}
-    [role="option"]:hover,
-    li[role="option"]:hover {{
-        background-color: rgba(59, 130, 246, 0.2) !important;
-    }}
-    [role="option"][aria-selected="true"],
-    li[role="option"][aria-selected="true"] {{
-        background-color: rgba(59, 130, 246, 0.35) !important;
-        color: var(--app-text) !important;
-    }}
-    
-    /* Text Input */
-    .stTextInput input {{
-        background-color: var(--app-surface) !important;
-        color: var(--app-text) !important;
-        border: 1px solid var(--app-border) !important;
-        border-radius: 12px !important;
-        caret-color: var(--app-accent) !important;
-    }}
-    .stTextInput input:focus {{
-        border-color: var(--app-accent) !important;
-        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
-    }}
-    
-    /* Checkbox & Radio */
-    [data-testid="stCheckbox"] label,
-    [data-testid="stRadio"] label {{
-        color: var(--app-text) !important;
-    }}
-    input[type="checkbox"],
-    input[type="radio"] {{
-        accent-color: var(--app-accent) !important;
-    }}
-    
-    /* Expander */
-    [data-testid="stExpander"] > details {{
-        background-color: rgba(15, 23, 42, 0.55) !important;
-        border: 1px solid var(--app-border) !important;
-        border-radius: 12px !important;
-    }}
-    [data-testid="stExpander"] summary {{
-        font-size: 1.02rem !important;
-        font-weight: 700 !important;
-        line-height: 1.35 !important;
-        color: var(--app-text) !important;
-        -webkit-text-fill-color: var(--app-text) !important;
-        background-color: transparent !important;
-    }}
-    [data-testid="stExpander"] details[open] > summary,
-    [data-testid="stExpander"] details[open] > summary * {{
-        color: var(--app-text) !important;
-        -webkit-text-fill-color: var(--app-text) !important;
-        background-color: transparent !important;
-    }}
-    [data-testid="stExpander"] summary:hover {{
-        background-color: rgba(59, 130, 246, 0.1) !important;
-    }}
-    [data-testid="stExpander"] summary p {{
-        margin: 0 !important;
-        line-height: 1.35 !important;
-    }}
-    [data-testid="stIconMaterial"],
-    [data-testid="stExpander"] summary span[class*="material"] {{
-        font-family: "Material Symbols Rounded", "Material Symbols Outlined", "Material Icons" !important;
-    }}
-    [data-testid="stExpander"] [data-testid="stMarkdownContainer"] p {{
-        margin-top: 0 !important;
-        margin-bottom: 0.55rem !important;
-        line-height: 1.65 !important;
-    }}
-    [data-testid="stExpander"] [data-testid="stMarkdownContainer"] p:last-child {{
-        margin-bottom: 0 !important;
-    }}
-    [data-testid="stExpander"] [data-testid="stMarkdownContainer"] li {{
-        margin-bottom: 0.35rem !important;
-        line-height: 1.65 !important;
-    }}
-    [data-testid="stExpander"] [data-testid="stMarkdownContainer"] li:last-child {{
-        margin-bottom: 0 !important;
-    }}
-    [data-testid="stExpander"] [data-testid="stMarkdownContainer"] ul,
-    [data-testid="stExpander"] [data-testid="stMarkdownContainer"] ol {{
-        margin-top: 0 !important;
-        margin-bottom: 0 !important;
-        padding-left: 1.4rem !important;
-    }}
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+apply_global_theme()
 
 ROLE_LABELS = {
     "Tank": "돌격",
@@ -328,33 +102,13 @@ def get_selected_tier(df):
     )
 
 
-st.title("💡 역할별 랭크 비중")
-
-
-def render_top_navigation(current_page):
-    nav_items = [
-        ("main", "🏠 메인", "main.py"),
-        ("pick_win", "🚀 픽률/승률 분포", "pages/1_pick_win_distribution.py"),
-        ("role_rank", "💡 역할별 랭크 비중", "pages/2_role_rank_share.py"),
-    ]
-
-    nav_cols = st.columns(len(nav_items))
-    for col, (page_key, label, target) in zip(nav_cols, nav_items):
-        with col:
-            is_current = page_key == current_page
-            clicked = st.button(
-                label,
-                key=f"top_nav_{current_page}_{page_key}",
-                use_container_width=True,
-                type="primary" if is_current else "secondary",
-                disabled=is_current,
-            )
-            if clicked and hasattr(st, "switch_page"):
-                st.switch_page(target)
-
-
+render_page_hero(
+    "역할별 랭크 비중",
+    "티어별로 돌격·공격·지원 포지션의 랭크 구조를 직관적으로 비교합니다.",
+    badge="Role Composition",
+)
 render_top_navigation("role_rank")
-st.markdown("<div style='height: 0.4rem;'></div>", unsafe_allow_html=True)
+st.markdown("<div style='height: 0.25rem;'></div>", unsafe_allow_html=True)
 
 raw_df = load_data()
 selected_tier = get_selected_tier(raw_df)
@@ -413,25 +167,22 @@ for col, role_name in zip(role_cols, ["Tank", "Damage", "Support"]):
             plot_bgcolor=GLOBAL_BG_COLOR,
             dragmode=False,
         )
-        st.plotly_chart(fig_role_pie, use_container_width=True, config={"staticPlot": True})
+        st.plotly_chart(
+            fig_role_pie,
+            use_container_width=True,
+            config={"staticPlot": True},
+        )
 
 st.divider()
 
-with st.expander("이 페이지는 어떤 정보를 보여주나요?"):
-    st.markdown(
-        """- **역할별 랭크 비중** 차트는 선택한 티어에서 각 포지션(돌격·공격·지원) 영웅들이 `S / A / B / C` 랭크에 얼마나 분포하는지 보여줍니다.
-- 원형 차트 안의 숫자는 해당 랭크가 해당 포지션 전체 영웅 수 대비 차지하는 **비율(%)**입니다.
-- 랭크는 메인 페이지와 동일한 기준(승률 Z점수 + 픽률 로그 Z점수 기반 종합 점수)으로 산정됩니다.
-- 티어 드롭다운을 변경하면 해당 티어 기준 분포로 즉시 갱신됩니다."""
-    )
-
 with st.expander("차트 해석 가이드"):
     st.markdown(
-        """**S·A 비율이 높은 포지션** → 현재 메타에서 강세인 포지션입니다. 해당 포지션 영웅 픽을 우선 고려하세요.
+        """- 차트는 선택 티어 기준으로 각 포지션의 `S / A / B / C` 비율을 보여줍니다.
+- 원형 내부 값은 해당 포지션 내 랭크 점유율(%)입니다.
 
-**C 비율이 높은 포지션** → 성능 편차가 크거나 전반적으로 하향세인 포지션입니다. 영웅 선택에 주의가 필요합니다.
+- `S·A` 비율이 높은 포지션: 현재 메타 강세 구간일 가능성이 큽니다.
+- `C` 비율이 높은 포지션: 성능 편차가 크거나 전반적으로 불리할 수 있습니다.
 
-**티어별 비교 팁**
-- 낮은 티어(브론즈·실버)와 높은 티어(마스터·그랜드마스터)의 분포 차이를 비교하면 **숙련도 의존성**이 높은 포지션을 파악할 수 있습니다.
-- 예: 공격 포지션이 낮은 티어에선 C가 많고 높은 티어에선 S·A가 많다면, 조작 난이도가 높은 영웅이 집중된 포지션일 가능성이 높습니다."""
+- 티어 간 분포 차이가 크면 숙련도 의존성이 높은 포지션일 수 있습니다.
+- 랭크 산정 기준은 메인 페이지와 동일합니다."""
     )

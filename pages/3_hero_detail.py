@@ -5,219 +5,15 @@ import json
 import html
 import os
 import re
+from ui import (
+    GLOBAL_FONT_FAMILY,
+    apply_global_theme,
+    render_page_hero,
+    render_top_navigation,
+)
 
 st.set_page_config(page_title="영웅 상세", layout="wide")
-
-GLOBAL_BG_COLOR = "#0f172a"
-GLOBAL_TEXT_COLOR = "#f8fafc"
-GLOBAL_SURFACE_COLOR = "#111827"
-GLOBAL_BORDER_COLOR = "#334155"
-GLOBAL_MUTED_TEXT_COLOR = "#94a3b8"
-GLOBAL_ACCENT_COLOR = "#3b82f6"
-GLOBAL_FONT_FAMILY = "'Pretendard Variable', 'Pretendard', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Segoe UI', sans-serif"
-
-st.markdown(
-    f"""
-    <style>
-    :root,
-    [data-theme="light"],
-    [data-theme="dark"] {{
-        color-scheme: dark !important;
-        --app-bg: {GLOBAL_BG_COLOR};
-        --app-surface: {GLOBAL_SURFACE_COLOR};
-        --app-border: {GLOBAL_BORDER_COLOR};
-        --app-text: {GLOBAL_TEXT_COLOR};
-        --app-text-muted: {GLOBAL_MUTED_TEXT_COLOR};
-        --app-accent: {GLOBAL_ACCENT_COLOR};
-        --app-font: {GLOBAL_FONT_FAMILY};
-        --primary-color: {GLOBAL_ACCENT_COLOR};
-        --background-color: {GLOBAL_BG_COLOR};
-        --secondary-background-color: {GLOBAL_SURFACE_COLOR};
-        --text-color: {GLOBAL_TEXT_COLOR};
-        --font: {GLOBAL_FONT_FAMILY};
-    }}
-    html, body {{
-        color-scheme: dark !important;
-    }}
-    html, body, .stApp,
-    [data-testid="stAppViewContainer"],
-    [data-testid="stHeader"] {{
-        background-color: var(--app-bg) !important;
-        color: var(--app-text) !important;
-    }}
-    header[data-testid="stHeader"] {{
-        display: none !important;
-    }}
-    .block-container {{
-        padding-top: 3.35rem !important;
-        padding-bottom: 1.8rem !important;
-    }}
-    [data-testid="stSidebarNav"],
-    [data-testid="stSidebar"],
-    .sidebar,
-    [aria-label="Sidebar"] {{
-        display: none !important;
-    }}
-    [data-testid="stSidebarCollapseButton"],
-    [data-testid="stSidebarToggleButton"],
-    button[aria-label="Open sidebar"],
-    button[aria-label="Close sidebar"] {{
-        display: none !important;
-    }}
-    body, .stApp, [data-testid="stMarkdownContainer"], [data-testid="stText"], p, span, div, label {{
-        font-family: var(--app-font) !important;
-    }}
-    .stButton > button,
-    div[data-testid="stButton"] > button,
-    button[data-testid^="stBaseButton-"] {{
-        border-radius: 12px !important;
-        font-weight: 600 !important;
-        min-height: 40px !important;
-    }}
-    .stButton > button[kind="secondary"],
-    button[data-testid="stBaseButton-secondary"] {{
-        background-color: #0b1220 !important;
-        color: var(--app-text) !important;
-        border: 1px solid var(--app-border) !important;
-        -webkit-text-fill-color: var(--app-text) !important;
-    }}
-    .stButton > button[kind="primary"],
-    button[data-testid="stBaseButton-primary"] {{
-        background-color: var(--app-accent) !important;
-        border-color: #60a5fa !important;
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
-    }}
-    .stButton > button[kind="primary"]:disabled,
-    button[data-testid="stBaseButton-primary"]:disabled {{
-        opacity: 1 !important;
-    }}
-    
-    /* Inputs: selectbox + search */
-    .stTextInput input,
-    .stNumberInput input,
-    .stTextArea textarea,
-    .stSelectbox [data-baseweb="select"] > div,
-    .stSelectbox [data-baseweb="select"] input,
-    .stSelectbox [data-baseweb="select"] span,
-    div[data-baseweb="select"] > div,
-    div[data-baseweb="select"] input,
-    div[data-baseweb="select"] span {{
-        background-color: var(--app-surface) !important;
-        color: var(--app-text) !important;
-        -webkit-text-fill-color: var(--app-text) !important;
-        border: 1px solid var(--app-border) !important;
-        border-radius: 12px !important;
-        opacity: 1 !important;
-    }}
-    .stSelectbox svg,
-    div[data-baseweb="select"] svg {{
-        fill: var(--app-text) !important;
-        color: var(--app-text) !important;
-    }}
-    .stTextInput input::placeholder,
-    .stTextArea textarea::placeholder,
-    .stSelectbox input::placeholder,
-    div[data-baseweb="select"] input::placeholder {{
-        color: var(--app-text-muted) !important;
-        -webkit-text-fill-color: var(--app-text-muted) !important;
-        opacity: 1 !important;
-    }}
-    .stTextInput input:focus,
-    .stNumberInput input:focus,
-    .stTextArea textarea:focus,
-    .stSelectbox [data-baseweb="select"] > div:focus-within,
-    div[data-baseweb="select"] > div:focus-within {{
-        border-color: var(--app-accent) !important;
-        box-shadow: 0 0 0 1px var(--app-accent) !important;
-    }}
-
-    /* Dropdown popup and options */
-    [data-baseweb="popover"],
-    [data-baseweb="menu"],
-    [role="listbox"],
-    ul[role="listbox"] {{
-        background-color: var(--app-surface) !important;
-        color: var(--app-text) !important;
-        border: 1px solid var(--app-border) !important;
-        border-radius: 12px !important;
-        opacity: 1 !important;
-    }}
-    [role="option"],
-    li[role="option"] {{
-        background-color: var(--app-surface) !important;
-        color: var(--app-text) !important;
-        -webkit-text-fill-color: var(--app-text) !important;
-    }}
-    [role="option"]:hover,
-    li[role="option"]:hover {{
-        background-color: rgba(59, 130, 246, 0.2) !important;
-    }}
-    [role="option"][aria-selected="true"],
-    li[role="option"][aria-selected="true"] {{
-        background-color: rgba(59, 130, 246, 0.35) !important;
-        color: var(--app-text) !important;
-    }}
-    
-    /* Text Input */
-    .stTextInput input {{
-        background-color: var(--app-surface) !important;
-        color: var(--app-text) !important;
-        border: 1px solid var(--app-border) !important;
-        border-radius: 12px !important;
-        caret-color: var(--app-accent) !important;
-    }}
-    .stTextInput input:focus {{
-        border-color: var(--app-accent) !important;
-        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
-    }}
-    
-    /* Checkbox & Radio */
-    [data-testid="stCheckbox"] label,
-    [data-testid="stRadio"] label {{
-        color: var(--app-text) !important;
-    }}
-    input[type="checkbox"],
-    input[type="radio"] {{
-        accent-color: var(--app-accent) !important;
-    }}
-    
-    [data-testid="stExpander"] > details {{
-        background-color: rgba(15, 23, 42, 0.55) !important;
-        border: 1px solid var(--app-border) !important;
-        border-radius: 12px !important;
-    }}
-    [data-testid="stExpander"] summary {{
-        font-size: 1.01rem !important;
-        font-weight: 700 !important;
-        line-height: 1.3 !important;
-        color: var(--app-text) !important;
-        -webkit-text-fill-color: var(--app-text) !important;
-        background-color: transparent !important;
-    }}
-    [data-testid="stExpander"] details[open] > summary,
-    [data-testid="stExpander"] details[open] > summary * {{
-        color: var(--app-text) !important;
-        -webkit-text-fill-color: var(--app-text) !important;
-        background-color: transparent !important;
-    }}
-    [data-testid="stExpander"] summary:hover {{
-        background-color: rgba(59, 130, 246, 0.1) !important;
-    }}
-    [data-testid="stExpander"] summary p {{
-        margin: 0 !important;
-    }}
-    [data-testid="stExpander"] [data-testid="stIconMaterial"] {{
-        display: none !important;
-    }}
-    [data-testid="stExpander"] summary span[class*="material"],
-    [data-testid="stIconMaterial"] {{
-        font-family: "Material Symbols Rounded", "Material Symbols Outlined", "Material Icons" !important;
-    }}
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+apply_global_theme()
 
 ROLE_LABELS = {
     "Tank": "돌격",
@@ -243,30 +39,6 @@ def translate_role_name(role_name):
 
 def translate_tier_name(tier_name):
     return TIER_LABELS.get(str(tier_name), str(tier_name))
-
-
-def clear_detail_query_params():
-    for key in ["hero", "tier", "source"]:
-        if key in st.query_params:
-            del st.query_params[key]
-    for key in ["detail_hero", "detail_tier", "detail_source"]:
-        if key in st.session_state:
-            del st.session_state[key]
-
-
-def render_top_navigation():
-    nav_items = [
-        ("main", "🏠 메인", "main.py"),
-        ("pick_win", "🚀 픽률/승률 분포", "pages/1_pick_win_distribution.py"),
-        ("role_rank", "💡 역할별 랭크 비중", "pages/2_role_rank_share.py"),
-    ]
-    nav_cols = st.columns(len(nav_items))
-    for col, (_, label, target) in zip(nav_cols, nav_items):
-        with col:
-            if st.button(label, key=f"top_nav_detail_{target}", use_container_width=True, type="secondary"):
-                clear_detail_query_params()
-                if hasattr(st, "switch_page"):
-                    st.switch_page(target)
 
 
 @st.cache_data
@@ -478,9 +250,13 @@ def get_hero_perk_rows(hero_name):
     return {"minor": minor_rows, "major": major_rows}
 
 
-st.title("🧾 영웅 상세 페이지")
-render_top_navigation()
-st.markdown("<div style='height: 0.35rem;'></div>", unsafe_allow_html=True)
+render_page_hero(
+    "영웅 상세 리포트",
+    "선택한 영웅의 티어별 지표, 전장 성능, 퍼크 선호도를 한 번에 확인합니다.",
+    badge="Hero Deep Dive",
+)
+render_top_navigation("detail")
+st.markdown("<div style='height: 0.25rem;'></div>", unsafe_allow_html=True)
 
 hero_from_query = st.session_state.get("detail_hero") or st.query_params.get("hero")
 if isinstance(hero_from_query, list):
