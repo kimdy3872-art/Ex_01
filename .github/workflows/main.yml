@@ -1,9 +1,9 @@
-name: Monthly Data Update
+name: Weekly & Latest Data Update
 
 on:
   schedule:
-    # 매월 1일 00:00 UTC (한국 시간 09:00)에 실행
-    - cron: '0 0 * * *'
+    # 매주 월요일 00:00 UTC (한국 시간 09:00)에 실행
+    - cron: '0 0 * * 1'
   # 수동으로도 실행 가능하게 설정
   workflow_dispatch:
 
@@ -35,13 +35,15 @@ jobs:
         run: |
           rm -rf ~/.wdm .wdm
       
-      - name: Run update.py (Stats Crawler)
+      - name: Run update.py (Stats + Perk Crawler)
         env:
           MAX_WORKERS: "2"
-        run: python update.py
-      
-      - name: Run update_perk.py (Perk Crawler)
-        run: python update_perk.py
+        run: python update.py --mode all
+        #
+        # 주요 산출물:
+        # - latest_tier.csv, overwatch_competitive_stats.csv (최신 CSV)
+        # - data/latest/latest_tier.parquet (최신 Parquet)
+        # - data/history/weekly/year=YYYY/week=WW/tier_snapshot.parquet (주간)
       
       - name: Configure Git
         run: |
