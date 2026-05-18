@@ -3,7 +3,7 @@ name: Monthly Data Update
 on:
   schedule:
     # 매월 1일 00:00 UTC (한국 시간 09:00)에 실행
-    - cron: '0 0 1 * *'
+    - cron: '0 0 * * *'
   # 수동으로도 실행 가능하게 설정
   workflow_dispatch:
 
