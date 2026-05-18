@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -51,7 +53,10 @@ jobs:
           git add -A
           if ! git diff --cached --quiet; then
             git commit -m "chore: Monthly data update - $(date +'%Y-%m-%d')"
-            git push
+            BRANCH="${GITHUB_REF_NAME:-main}"
+            git fetch origin "$BRANCH"
+            git rebase "origin/$BRANCH"
+            git push origin "HEAD:$BRANCH"
           else
             echo "No changes to commit"
           fi
