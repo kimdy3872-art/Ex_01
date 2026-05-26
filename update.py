@@ -108,6 +108,16 @@ STATS_INPUT = "PC"
 STATS_REGION = "Asia"
 STATS_ROLE = "All"
 STATS_GAME_MODE_RQ = os.getenv("STATS_GAME_MODE_RQ", "2")
+STATS_GAME_MODE_RQ_CANDIDATES = [
+    value.strip()
+    for value in os.getenv("STATS_GAME_MODE_RQ_CANDIDATES", STATS_GAME_MODE_RQ).split(",")
+    if value.strip()
+]
+if not STATS_GAME_MODE_RQ_CANDIDATES:
+    STATS_GAME_MODE_RQ_CANDIDATES = ["2", "1"]
+if STATS_GAME_MODE_RQ not in STATS_GAME_MODE_RQ_CANDIDATES:
+    STATS_GAME_MODE_RQ_CANDIDATES.insert(0, STATS_GAME_MODE_RQ)
+ACTIVE_STATS_GAME_MODE_RQ = None
 
 CATEGORY_TO_ROLE = {
     "tanks": "Tank",
@@ -219,26 +229,44 @@ def normalize_dataset_for_scoring(df):
     return df
 
 
+def get_active_stats_game_mode_rq():
+    return ACTIVE_STATS_GAME_MODE_RQ or STATS_GAME_MODE_RQ
+
+
 def build_rates_url(map_id, tier_name):
     params = {
         "input": STATS_INPUT,
         "map": map_id,
         "region": STATS_REGION,
         "role": STATS_ROLE,
-        "rq": STATS_GAME_MODE_RQ,
+        "rq": get_active_stats_game_mode_rq(),
         "tier": normalize_tier_name(tier_name),
     }
     return "https://overwatch.blizzard.com/ko-kr/rates/?" + urlencode(params)
 
 
-def page_context_matches(driver, expected_map, expected_tier):
+def build_rates_url_with_rq(map_id, tier_name, rq):
+    params = {
+        "input": STATS_INPUT,
+        "map": map_id,
+        "region": STATS_REGION,
+        "role": STATS_ROLE,
+        "rq": rq,
+        "tier": normalize_tier_name(tier_name),
+    }
+    return "https://overwatch.blizzard.com/ko-kr/rates/?" + urlencode(params)
+
+
+def page_context_matches(driver, expected_map, expected_tier, expected_rq=None):
+    if expected_rq is None:
+        expected_rq = get_active_stats_game_mode_rq()
     context = current_page_context(driver)
     return (
         context["input"] == STATS_INPUT
         and context["map"] == expected_map
         and context["region"] == STATS_REGION
         and context["role"] == STATS_ROLE
-        and context["rq"] == STATS_GAME_MODE_RQ
+        and context["rq"] == expected_rq
         and context["tier"] == normalize_tier_name(expected_tier)
     )
 
@@ -265,10 +293,10 @@ def is_unsupported_all_maps_tier_redirect(expected_map, expected_tier, page_cont
     )
 
 
-def wait_for_page_context(driver, expected_map, expected_tier, timeout=8):
+def wait_for_page_context(driver, expected_map, expected_tier, expected_rq=None, timeout=8):
     deadline = time.time() + timeout
     while time.time() < deadline:
-        if page_context_matches(driver, expected_map, expected_tier):
+        if page_context_matches(driver, expected_map, expected_tier, expected_rq=expected_rq):
             return True, current_page_context(driver)
         time.sleep(0.5)
 
@@ -463,13 +491,57 @@ def save_weekly_snapshot_if_due(snapshot_df, today_obj):
     return weekly_parquet_path
 
 
+def resolve_stats_game_mode_rq():
+    probe_map = "all-maps"
+    probe_tier = "All"
+    probe_driver = None
+
+    try:
+        probe_driver = create_driver()
+        register_driver(probe_driver)
+
+        for rq in ["1", "2"]:
+            try:
+                probe_driver.get(build_rates_url_with_rq(probe_map, probe_tier, rq))
+                wait_for_rates_content(probe_driver)
+                context_ok, page_context = wait_for_page_context(
+                    probe_driver,
+                    probe_map,
+                    probe_tier,
+                    expected_rq=rq,
+                )
+                if context_ok:
+                    print(f"✅ 경쟁전 rq 확정: {rq}")
+                    return rq
+
+                current_rq = page_context.get("rq")
+                print(
+                    f"⚠️  rq={rq} probe 실패: {probe_map}/{probe_tier}에서 rq={current_rq}로 리다이렉트됨"
+                )
+
+                if current_rq != "0":
+                    print(f"⚠️  예상과 다른 rq로 리다이렉트됨: {current_rq}")
+            except Exception as exc:
+                print(f"⚠️  rq={rq} probe 실패: {probe_map}/{probe_tier} -> {exc}")
+
+        return None
+    finally:
+        if probe_driver is not None:
+            unregister_driver(probe_driver)
+            try:
+                probe_driver.quit()
+            except Exception:
+                pass
+
+
 def scrape_data(driver, tier_name, map_id):
     """기존 드라이버로 특정 티어 + 전장 데이터 수집"""
-    url = build_rates_url(map_id, tier_name)
+    rq = get_active_stats_game_mode_rq()
+    url = build_rates_url_with_rq(map_id, tier_name, rq)
     try:
         driver.get(url)
         wait_for_rates_content(driver)
-        context_ok, page_context = wait_for_page_context(driver, map_id, tier_name)
+        context_ok, page_context = wait_for_page_context(driver, map_id, tier_name, expected_rq=rq)
         if not context_ok:
             if is_unsupported_all_maps_tier_redirect(map_id, tier_name, page_context):
                 print(
@@ -478,7 +550,7 @@ def scrape_data(driver, tier_name, map_id):
                 )
                 return None
 
-            print(f"⚠️  페이지 파라미터 불일치: 요청 map={map_id}, tier={tier_name} / 현재 URL={page_context['url']}")
+            print(f"⚠️  페이지 파라미터 불일치(rq={rq}): 요청 map={map_id}, tier={tier_name} / 현재 URL={page_context['url']}")
             return pd.DataFrame()
         time.sleep(1)
 
@@ -491,7 +563,7 @@ def scrape_data(driver, tier_name, map_id):
             df['ban_rate'] = '0%'
         ok, reason = validate_scraped_df(df)
         if not ok:
-            print(f"⚠️  수집 검증 실패({tier_name}/{map_id}): {reason}")
+            print(f"⚠️  수집 검증 실패({tier_name}/{map_id}, rq={rq}): {reason}")
             return pd.DataFrame()
 
         if not df.empty:
@@ -744,6 +816,7 @@ def run_perk_update(locale=DEFAULT_LOCALE, max_heroes=None, headed=False):
             return
 
         all_rows: List[Dict] = []
+        failed_heroes: List[str] = []
         total = len(hero_links)
         for idx, hero_url in enumerate(hero_links, start=1):
             print(f"[{idx}/{total}] scraping {hero_url}")
@@ -753,8 +826,17 @@ def run_perk_update(locale=DEFAULT_LOCALE, max_heroes=None, headed=False):
                     all_rows.extend(rows)
                 else:
                     print(f"  warning: no perk rows parsed: {hero_url}")
+                    failed_heroes.append(hero_url)
             except Exception as exc:
                 print(f"  error: {hero_url} -> {exc}")
+                failed_heroes.append(hero_url)
+
+        if failed_heroes:
+            print(
+                f"❌ 퍼크 수집이 완전하지 않아 저장을 중단합니다. 실패 수: {len(failed_heroes)}/{total}"
+            )
+            print(f"❌ 실패 목록: {failed_heroes[:20]}{' ...' if len(failed_heroes) > 20 else ''}")
+            return
 
         if not all_rows:
             print("No perk rows scraped.")
@@ -814,6 +896,16 @@ def run_perk_update(locale=DEFAULT_LOCALE, max_heroes=None, headed=False):
 
 def run_stats_update():
     started_at = perf_counter()
+    global ACTIVE_STATS_GAME_MODE_RQ
+
+    resolved_rq = resolve_stats_game_mode_rq()
+    if resolved_rq is None:
+        print("❌ rq 값을 확정하지 못해 수집을 중단합니다.")
+        return
+
+    ACTIVE_STATS_GAME_MODE_RQ = resolved_rq
+    print(f"🧭 수집에 사용할 rq: {ACTIVE_STATS_GAME_MODE_RQ}")
+
     map_ids = list(map_dict.keys())
     print(f"🗺️  전장 {len(map_ids)}개: {map_ids}")
 
@@ -861,9 +953,15 @@ def run_stats_update():
         print("❌ 수집된 데이터가 없습니다.")
         return
 
-    if failed_tasks:
-        print(f"❌ 실패한 작업이 있어 저장을 중단합니다. 실패 수: {len(failed_tasks)}/{total}")
-        print(f"❌ 실패 목록: {failed_tasks[:20]}{' ...' if len(failed_tasks) > 20 else ''}")
+    if failed_tasks or skipped_tasks or len(final_list) != total:
+        print(
+            f"❌ 수집이 완전하지 않아 저장을 중단합니다. 성공 {len(final_list)}/{total}, "
+            f"실패 {len(failed_tasks)}, 스킵 {len(skipped_tasks)}"
+        )
+        if failed_tasks:
+            print(f"❌ 실패 목록: {failed_tasks[:20]}{' ...' if len(failed_tasks) > 20 else ''}")
+        if skipped_tasks:
+            print(f"❌ 스킵 목록: {skipped_tasks[:20]}{' ...' if len(skipped_tasks) > 20 else ''}")
         return
 
     # 데이터 통합
@@ -904,29 +1002,6 @@ def run_stats_update():
     full_df['rank'] = full_df.groupby(group_key)['total_score'].transform(assign_rank)
     full_df = normalize_dataset_for_scoring(full_df)
     full_df = full_df.reindex(columns=STATS_COLUMNS)
-
-    if skipped_tasks and os.path.exists(LATEST_STATS_PATH):
-        previous_latest_df = pd.read_parquet(LATEST_STATS_PATH)
-        preserved_frames = []
-        for tier_name, map_id, _reason in skipped_tasks:
-            preserved = previous_latest_df[
-                (previous_latest_df['data_tier'].astype(str) == normalize_tier_name(tier_name))
-                & (previous_latest_df['map'].astype(str) == map_id)
-            ].copy()
-            if not preserved.empty:
-                preserved_frames.append(preserved.reindex(columns=STATS_COLUMNS))
-
-        if preserved_frames:
-            preserved_df = pd.concat(preserved_frames, ignore_index=True)
-            full_df = pd.concat([full_df, preserved_df], ignore_index=True)
-            print(
-                f"↪️  리다이렉트로 수집 불가한 조합 {len(skipped_tasks)}개는 "
-                f"기존 latest 행 {len(preserved_df)}개를 유지합니다."
-            )
-        else:
-            print(f"⚠️  리다이렉트로 수집 불가한 조합 {len(skipped_tasks)}개가 있고 유지할 기존 행이 없습니다.")
-    elif skipped_tasks:
-        print(f"⚠️  리다이렉트로 수집 불가한 조합 {len(skipped_tasks)}개가 있고 기존 latest 파일이 없습니다.")
 
     if is_degenerate_snapshot(full_df):
         print("❌ 비정상 스냅샷 감지(전장별 분산 부족). 저장을 중단합니다.")

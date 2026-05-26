@@ -69,8 +69,6 @@ def load_history_data():
     frames = []
     sources = [
         (os.path.join("data", "history", "weekly", "**", "*.parquet"), 1),
-        (os.path.join("data", "tier_history", "date=*", "*.parquet"), 2),
-        (os.path.join("data", "latest", "latest_tier.parquet"), 3),
     ]
     seen_paths = set()
 
@@ -308,22 +306,21 @@ if map_df.empty:
     st.stop()
 
 map_df = map_df.sort_values("period_date").copy()
-unique_dates = map_df["period_date"].drop_duplicates().tolist()
+unique_dates = sorted(map_df["period_date"].drop_duplicates().tolist())
 
 if len(unique_dates) > 1:
-    start_date, end_date = st.slider(
+    start_date, end_date = st.select_slider(
         "기간",
-        min_value=unique_dates[0].date(),
-        max_value=unique_dates[-1].date(),
-        value=(unique_dates[0].date(), unique_dates[-1].date()),
-        format="YYYY-MM-DD",
+        options=unique_dates,
+        value=(unique_dates[0], unique_dates[-1]),
+        format_func=lambda value: value.strftime("%Y-%m-%d"),
     )
     map_df = map_df[
-        (map_df["period_date"].dt.date >= start_date) &
-        (map_df["period_date"].dt.date <= end_date)
+        (map_df["period_date"] >= pd.Timestamp(start_date)) &
+        (map_df["period_date"] <= pd.Timestamp(end_date))
     ].copy()
 else:
-    st.info("현재 저장된 스냅샷이 1개입니다. `update.py`를 주기적으로 실행하면 이 페이지가 날짜별 추이로 확장됩니다.")
+    st.info("현재 저장된 스냅샷이 1개입니다. 날짜 선택 바는 수집된 날짜만 표시됩니다.")
 
 latest_row = map_df.sort_values("period_date").iloc[-1]
 previous_row = map_df.sort_values("period_date").iloc[-2] if len(map_df) > 1 else None
