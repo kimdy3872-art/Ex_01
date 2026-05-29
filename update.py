@@ -871,18 +871,6 @@ def run_perk_update(locale=DEFAULT_LOCALE, max_heroes=None, headed=False):
         ]
         df = df.reindex(columns=columns)
 
-        if os.path.exists(LATEST_PERKS_PATH):
-            previous_perks_df = pd.read_parquet(LATEST_PERKS_PATH)
-            old_compare = build_perk_compare_frame(previous_perks_df)
-            new_compare = build_perk_compare_frame(df)
-            if new_compare.equals(old_compare):
-                elapsed = int(time.time() - started_at)
-                print(
-                    f"Perks unchanged. Skipped saving {LATEST_PERKS_PATH} "
-                    f"(heroes={df['hero_slug'].nunique()}, elapsed={elapsed}s)"
-                )
-                return
-
         save_parquet(df, LATEST_PERKS_PATH)
 
         elapsed = int(time.time() - started_at)
@@ -1025,17 +1013,10 @@ def run_stats_update():
     data_changed = True
     if previous_latest_df is not None and not previous_latest_df.empty:
         old_compare = build_snapshot_compare_frame(previous_latest_df.copy())
-        new_compare = build_snapshot_compare_frame(full_df.copy())
+        new_compare = build_snapshot_compare_frame(latest_df.copy())
         data_changed = not new_compare.equals(old_compare)
 
-    if not data_changed and today_obj.weekday() != WEEKLY_SNAPSHOT_WEEKDAY:
-        elapsed = format_elapsed(perf_counter() - started_at)
-        print(f"⏭️  데이터 변동 없음. 업데이트를 건너뜁니다. (소요 시간: {elapsed})")
-        return
-
-    if data_changed:
-        save_parquet(snapshot_df, LATEST_STATS_PATH)
-
+    save_parquet(snapshot_df, LATEST_STATS_PATH)
     weekly_saved_as = save_weekly_snapshot_if_due(snapshot_df, today_obj)
 
     elapsed = format_elapsed(perf_counter() - started_at)
@@ -1046,7 +1027,7 @@ def run_stats_update():
         )
         print(f"📁 최신 데이터: {LATEST_STATS_PATH}")
     else:
-        print(f"⏭️  데이터 변동 없음. latest 유지. (소요 시간: {elapsed})")
+        print(f"⏭️  데이터 변동 없음. latest 덮어쓰기 완료. (소요 시간: {elapsed})")
     print(f"📁 주간 스냅샷: {weekly_saved_as}")
 
 
